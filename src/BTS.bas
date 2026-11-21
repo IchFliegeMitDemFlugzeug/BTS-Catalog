@@ -181,7 +181,7 @@ Public Sub BTS_Init()
     BTS_OrderInit
     dbSh.Visible = xlSheetVeryHidden
     For Each sh In ThisWorkbook.Worksheets
-        If sh.Name = "Sheet1" Then
+        If sh.Name = "Sheet1" Or sh.Name = ChrW(1051) & ChrW(1080) & ChrW(1089) & ChrW(1090) & "1" Then
             If WorksheetFunction.CountA(sh.Cells) = 0 And ThisWorkbook.Worksheets.Count > 10 Then
                 Application.DisplayAlerts = False
                 sh.Delete
@@ -221,8 +221,8 @@ Private Sub BTS_ReferenceInit()
             sh.Cells(i + 2, 9).Value = codes(i)
         Next i
         For i = 0 To 4
-            sh.Cells(i + 2, 11).Value = Array("40", "45", "50", "55", "60")(i)
-            sh.Cells(i + 2, 13).Value = Array("00", "30", "45", "60", "90")(i)
+            sh.Cells(i + 2, 11).Value = Choose(i + 1, "40", "45", "50", "55", "60")
+            sh.Cells(i + 2, 13).Value = Choose(i + 1, "00", "30", "45", "60", "90")
         Next i
         sh.Range("A9").Value = BTS_T(10)
         sh.Range("B9").Value = "BTS.XX.MM.DDAA.NNN"
@@ -374,7 +374,7 @@ Private Function HasPath(ByVal fromCode As String, ByVal targetCode As String, B
 End Function
 
 Private Function ValidateForm(ByVal code As String, ByVal overwrite As Boolean) As Boolean
-    Dim sh As Worksheet, r As Long, cmp As String, q As Variant, nBase As Long, nHead As Long, ar As Variant, baseMat As String, headMat As String, kindAssembly As Boolean
+    Dim sh As Worksheet, r As Long, cmp As String, q As Variant, nBase As Long, nHead As Long, ar As Variant, baseMat As String, headMat As String, kindAssembly As Boolean, seen As Object
     Set sh = S(1)
     If code = "" Then MsgBox BTS_T(40), vbExclamation: Exit Function
     If overwrite Then
@@ -385,12 +385,15 @@ Private Function ValidateForm(ByVal code As String, ByVal overwrite As Boolean) 
     kindAssembly = IsAssemblyCode(code)
     ar = Split(code, ".")
     If kindAssembly Then
+        Set seen = CreateObject("Scripting.Dictionary")
         If Len(ar(2)) <> 4 Then MsgBox BTS_T(42), vbExclamation: Exit Function
         baseMat = Left$(ar(2), 2)
         headMat = Right$(ar(2), 2)
         For r = FORM_FIRST To FORM_LAST
             cmp = Trim$(CStr(sh.Cells(r, 1).Value))
             If cmp <> "" Then
+                If seen.Exists(cmp) Then MsgBox BTS_T(43), vbExclamation: Exit Function
+                seen.Add cmp, True
                 q = sh.Cells(r, 3).Value
                 If Not ExistsCode(cmp) Or Not IsNumeric(q) Or Val(q) <= 0 Or Fix(Val(q)) <> Val(q) Then MsgBox BTS_T(43), vbExclamation: Exit Function
                 If cmp = code Or HasPath(cmp, code, 0) Then MsgBox BTS_T(44), vbExclamation: Exit Function
@@ -794,6 +797,12 @@ Public Sub BTS_DeleteSelected()
             rr = AssemblyRow(code)
             If rr > 0 Then DB.Range("A" & rr & ":E" & rr).Delete Shift:=xlUp
             RemoveCompositions code
+            For rr = EndRow(DB, 11) To 2 Step -1
+                If CStr(DB.Cells(rr, 11).Value) = code Then DB.Range("K" & rr & ":L" & rr).Delete Shift:=xlUp
+            Next rr
+            For rr = EndRow(DB, 14) To 2 Step -1
+                If CStr(DB.Cells(rr, 14).Value) = code Then DB.Range("N" & rr & ":O" & rr).Delete Shift:=xlUp
+            Next rr
             For rr = EndRow(DB, 6) To 2 Step -1
                 If CStr(DB.Cells(rr, 7).Value) = code Then DB.Range("F" & rr & ":I" & rr).Delete Shift:=xlUp
             Next rr
@@ -944,6 +953,12 @@ Public Sub BTS_Changed(ByVal Sh As Object, ByVal Target As Range)
             On Error GoTo Clean
             Application.EnableEvents = False
             BTS_UpdateOrderLists
+        End If
+    ElseIf Sh.Name = BTS_T(7) Then
+        If Not Intersect(Target, Sh.Range("A2:B2000")) Is Nothing Then
+            On Error GoTo Clean
+            Application.EnableEvents = False
+            BTS_ComponentChoices
         End If
     ElseIf Sh.Name = BTS_T(1) Then
         If Not Intersect(Target, Sh.Range("A2:F2")) Is Nothing Then
