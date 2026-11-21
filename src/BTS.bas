@@ -286,8 +286,8 @@ Private Sub BTS_FormInit()
     sh.Range("D4:E4").NumberFormat = "00"
     sh.Range("F4").NumberFormat = "@"
     sh.Range("G4").NumberFormat = "@"
-    DB.Range("AA1:AA2").Value = Application.Transpose(Array(BTS_T(73), BTS_T(74)))
-    EnsureName "BTSItemKinds", "'_BTS_DATA'!$AA$1:$AA$2"
+    DB.Range("AG1:AG2").Value = Application.Transpose(Array(BTS_T(73), BTS_T(74)))
+    EnsureName "BTSItemKinds", "'_BTS_DATA'!$AG$1:$AG$2"
     PutList sh.Range("B1"), "BTSItemKinds"
     PutList sh.Range("A4"), "BTSGroups"
     PutList sh.Range("B4"), "BTSMats"
@@ -318,18 +318,18 @@ Private Sub BTS_MarkChoices()
     Set ref = S(9)
     Set data = DB
     code = CStr(sh.Range("B4").Value)
-    data.Range("AB2:AB1000").ClearContents
+    data.Range("AH2:AH1000").ClearContents
     p = 2
     For r = 17 To 26
         If code <> "" And StrComp(Trim$(CStr(ref.Cells(r, 1).Value)), code, vbTextCompare) = 0 Then
             If Trim$(CStr(ref.Cells(r, 2).Value)) <> "" Then
-                data.Cells(p, 28).Value = ref.Cells(r, 2).Value
+                data.Cells(p, 34).Value = ref.Cells(r, 2).Value
                 p = p + 1
             End If
         End If
     Next r
-    EnsureName "BTSSelectedMarks", "'_BTS_DATA'!$AB$2:$AB$" & CStr(Application.Max(2, p - 1))
-    PutList sh.Range("B7"), "BTSSelectedMarks"
+    EnsureName "BTSSelectedMarks", "'_BTS_DATA'!$AH$2:$AH$" & CStr(Application.Max(2, p - 1))
+    PutList sh.Range("B7:D7"), "BTSSelectedMarks"
     If Not ValidMark(CStr(sh.Range("B7").Value), code) Then sh.Range("B7:D7").ClearContents
 End Sub
 
@@ -354,7 +354,7 @@ Private Sub BTS_FormMode(ByVal resetEntry As Boolean)
         sh.Range("C3").Value = BTS_T(76)
         PutList sh.Range("C4"), "BTSMats"
         sh.Range("B7:D7").ClearContents
-        sh.Range("B7").Validation.Delete
+        sh.Range("B7:D7").Validation.Delete
     Else
         sh.Range("B3").Value = BTS_T(12)
         sh.Range("C4").ClearContents
@@ -417,6 +417,7 @@ Private Function CodeFrom(ByVal sh As Worksheet) As String
     If f Like "*[!0-9]*" Or d Like "*[!0-9]*" Or e Like "*[!0-9]*" Then Exit Function
     isUnit = (CLng(f) Mod 10 = 0)
     If rr = 4 Then
+        If CStr(sh.Range("B1").Value) <> BTS_T(73) And CStr(sh.Range("B1").Value) <> BTS_T(74) Then Exit Function
         If isUnit <> BTS_FormIsAssembly() Then Exit Function
     End If
     If isUnit Then
