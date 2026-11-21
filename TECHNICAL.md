@@ -8,7 +8,7 @@
 
 **Служебный лист:** _BTS_DATA, создаётся автоматически и скрыт (VeryHidden). Это хранилище связей и заказа, а не пользовательский перечень.
 
-BTS.xlsx — оформленная исходная книга. BTS.xlsm — рабочая книга с VBA. Скрипт scripts/build.py встраивает VBA из src/BTS.bas, src/Localization.bas и src/ThisWorkbook.cls, сохраняя девять исходных листов.
+assets/BTS.xlsx — оформленная исходная книга. BTS.xlsm — рабочая книга с VBA. Скрипт scripts/build.py встраивает VBA из src/BTS.bas, src/Localization.bas и src/ThisWorkbook.cls, сохраняя девять исходных листов.
 
 ## 2. Структура обозначения
 

@@ -9,7 +9,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from pyopenvba import ExcelFile
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = ROOT / "BTS.xlsx"
+BASE = ROOT / "assets" / "BTS.xlsx"
 OUTPUT = ROOT / "BTS.xlsm"
 MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 CONTENT_TYPES = "http://schemas.openxmlformats.org/package/2006/content-types"
