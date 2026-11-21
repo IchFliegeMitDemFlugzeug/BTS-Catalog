@@ -745,8 +745,12 @@ Public Sub BTS_DeleteSelected()
     If idx = 2 Or idx = 7 Then
         code = CStr(sh.Cells(r, 1).Value)
         If code = "" Then Exit Sub
-        For rr = 2 To EndRow(DB, 6)
-            If CStr(DB.Cells(rr, 7).Value) = code Then useText = useText & vbCrLf & CStr(DB.Cells(rr, 6).Value)
+        For rr = 2 To EndRow(DB, 1)
+            If CStr(DB.Cells(rr, 1).Value) <> "" Then
+                If HasPath(CStr(DB.Cells(rr, 1).Value), code, 0) Then
+                    useText = useText & vbCrLf & CStr(DB.Cells(rr, 1).Value)
+                End If
+            End If
         Next rr
         If MsgBox(BTS_T(52) & code & vbCrLf & useText, vbYesNo + vbExclamation) <> vbYes Then Exit Sub
         For rr = EndRow(DB, 6) To 2 Step -1
@@ -807,16 +811,44 @@ Public Sub BTS_DeleteSelected()
 End Sub
 
 Private Sub BTS_RebuildOrder()
-    Dim sh As Worksheet, data As Worksheet, i As Long, rowN As Long, code As String
+    ' Sort complete order roots, never reorder individual rows inside a BOM.
+    Dim sh As Worksheet, data As Worksheet
+    Dim i As Long, j As Long, n As Long, rowN As Long, code As String, swap As String
+    Dim roots() As String
     Set sh = S(8)
     Set data = DB
     ResetTree sh, 8
     sh.Range("L8:L10000").ClearContents
+    n = 0
+    For i = 2 To EndRow(data, 11)
+        If CStr(data.Cells(i, 11).Value) <> "" Then n = n + 1
+    Next i
+    If n > 0 Then
+        ReDim roots(1 To n)
+        n = 0
+        For i = 2 To EndRow(data, 11)
+            code = CStr(data.Cells(i, 11).Value)
+            If code <> "" Then
+                n = n + 1
+                roots(n) = code
+            End If
+        Next i
+        For i = 1 To n - 1
+            For j = i + 1 To n
+                If StrComp(roots(i), roots(j), vbTextCompare) > 0 Then
+                    swap = roots(i)
+                    roots(i) = roots(j)
+                    roots(j) = swap
+                End If
+            Next j
+        Next i
+    End If
     rowN = 8
     sh.Outline.SummaryRow = xlAbove
-    For i = 2 To EndRow(data, 11)
-        code = CStr(data.Cells(i, 11).Value)
-        If code <> "" Then DrawNode sh, code, "", code, code, 1, CDbl(data.Cells(i, 12).Value), rowN, True
+    For i = 1 To n
+        code = roots(i)
+        j = Locate(data, 11, code)
+        If j > 0 Then DrawNode sh, code, "", code, code, 1, CDbl(data.Cells(j, 12).Value), rowN, True
     Next i
     If rowN > 8 Then
         sh.Range("L8:L" & CStr(rowN - 1)).Value = BTS_T(25)
