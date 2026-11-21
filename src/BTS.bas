@@ -2,6 +2,14 @@
 Option Explicit
 
 Private Const MAX_DEPTH As Long = 6
+Private Const LIST_CODE As Long = 2
+Private Const TREE_NAME As Long = 8
+Private Const TREE_MATERIAL As Long = 9
+Private Const TREE_QTY As Long = 10
+Private Const TREE_PARENT As Long = 11
+Private Const TREE_PATH As Long = 12
+Private Const TREE_DELETE As Long = 13
+Private Const ORDER_FIRST As Long = 8
 Private Const FORM_FIRST As Long = 15
 Private Const FORM_LAST As Long = 54
 
@@ -30,7 +38,7 @@ Private Function Locate(ByVal sh As Worksheet, ByVal col As Long, ByVal code As 
 End Function
 
 Private Function PartRow(ByVal code As String) As Long
-    PartRow = Locate(S(2), 1, code)
+    PartRow = Locate(S(2), LIST_CODE, code)
 End Function
 
 Private Function AssemblyRow(ByVal code As String) As Long
@@ -38,7 +46,7 @@ Private Function AssemblyRow(ByVal code As String) As Long
 End Function
 
 Private Function StandardRow(ByVal code As String) As Long
-    StandardRow = Locate(S(7), 1, code)
+    StandardRow = Locate(S(7), LIST_CODE, code)
 End Function
 
 Private Function ExistsCode(ByVal code As String) As Boolean
@@ -52,17 +60,17 @@ End Function
 Private Function ItemName(ByVal code As String) As String
     Dim p As Long
     p = PartRow(code)
-    If p > 0 Then ItemName = CStr(S(2).Cells(p, 2).Value): Exit Function
+    If p > 0 Then ItemName = CStr(S(2).Cells(p, 3).Value): Exit Function
     p = AssemblyRow(code)
     If p > 0 Then ItemName = CStr(DB.Cells(p, 2).Value): Exit Function
     p = StandardRow(code)
-    If p > 0 Then ItemName = CStr(S(7).Cells(p, 2).Value)
+    If p > 0 Then ItemName = CStr(S(7).Cells(p, 3).Value)
 End Function
 
 Private Function MaterialMark(ByVal code As String) As String
     Dim p As Long
     p = PartRow(code)
-    If p > 0 Then MaterialMark = CStr(S(2).Cells(p, 3).Value)
+    If p > 0 Then MaterialMark = CStr(S(2).Cells(p, 4).Value)
 End Function
 
 Private Function Kind(ByVal code As String) As Long
@@ -107,6 +115,9 @@ Private Sub MakeButton(ByVal sh As Worksheet, ByVal key As String, ByVal label A
         Set obj = sh.Shapes.AddShape(msoShapeRoundedRectangle, sh.Range(atCell).Left, sh.Range(atCell).Top, widthPoints, 25)
         obj.Name = key
     End If
+    obj.Left = sh.Range(atCell).Left
+    obj.Top = sh.Range(atCell).Top
+    obj.Width = widthPoints
     obj.OnAction = macroName
     obj.TextFrame.Characters.Text = label
     obj.Fill.ForeColor.RGB = RGB(227, 232, 236)
@@ -160,22 +171,10 @@ Public Sub BTS_Init()
         dbSh.Range("A1:O1").Value = Array("Assembly", "Name", "Family", "Link", "SubLink", "Parent", "Child", "Qty", "Role", "Reserved", "OrderCode", "OrderQty", "Reserved", "ExcludeRoot", "ExcludePath")
     End If
     BTS_ReferenceInit
-    If CStr(S(2).Range("A1").Value) = "" Then LayoutHeader S(2), Array(BTS_T(10), BTS_T(11), BTS_T(12))
-    If CStr(S(7).Range("A1").Value) = "" Then LayoutHeader S(7), Array(BTS_T(10), BTS_T(11))
-    S(2).Columns("A").ColumnWidth = 37
-    S(2).Columns("B").ColumnWidth = 48
-    S(2).Columns("C").ColumnWidth = 21
-    S(7).Columns("A").ColumnWidth = 53
-    S(7).Columns("B").ColumnWidth = 53
-    MakeButton S(2), "btnDelete", BTS_T(25), "BTS_DeleteSelected", "E2", 140
+    BTS_InitList S(2), True
+    BTS_InitList S(7), False
     For i = 3 To 6
-        If CStr(S(i).Range("A1").Value) = "" Then LayoutHeader S(i), Array("I", "II", "III", "IV", "V", "VI", BTS_T(11), BTS_T(12), BTS_T(13))
-        S(i).Columns("A:F").ColumnWidth = 29
-        S(i).Columns("G").ColumnWidth = 42
-        S(i).Columns("H").ColumnWidth = 19
-        S(i).Columns("I").ColumnWidth = 11
-        S(i).Columns("J:K").Hidden = True
-        MakeButton S(i), "btnDelete", BTS_T(25), "BTS_DeleteSelected", "M2", 140
+        BTS_InitFamily S(i)
     Next i
     BTS_FormInit
     BTS_OrderInit
@@ -203,43 +202,135 @@ Private Sub BTS_ReferenceInit()
     ' Reference sheet uses a narrow vertical layout, never extra columns N and beyond.
     Dim sh As Worksheet, i As Long
     Set sh = S(9)
-    If CStr(sh.Range("A1").Value) = "" Then
-        sh.Range("A1").Value = BTS_T(40)
-        sh.Range("B1").Value = BTS_T(14)
+    BTS_EnsureNumberColumn sh, 1
+    If CStr(sh.Range("B1").Value) = "" Then
+        sh.Range("B1").Value = BTS_T(40)
+        sh.Range("C1").Value = BTS_T(14)
         For i = 0 To 3
-            sh.Cells(i + 2, 1).Value = Choose(i + 1, "SH", "KR", "DU", "DT")
-            sh.Cells(i + 2, 2).Value = BTS_T(i + 3)
+            sh.Cells(i + 2, 2).Value = Choose(i + 1, "SH", "KR", "DU", "DT")
+            sh.Cells(i + 2, 3).Value = BTS_T(i + 3)
         Next i
-        sh.Range("A8").Value = BTS_T(40)
-        sh.Range("B8").Value = BTS_T(12)
-        sh.Range("A16").Value = BTS_T(40)
-        sh.Range("B16").Value = BTS_T(69)
-        sh.Range("C16").Value = BTS_T(12)
+        sh.Range("B8").Value = BTS_T(40)
+        sh.Range("C8").Value = BTS_T(12)
+        sh.Range("B16").Value = BTS_T(40)
+        sh.Range("C16").Value = BTS_T(69)
+        sh.Range("D16").Value = BTS_T(12)
         For i = 0 To 3
-            sh.Cells(i + 9, 1).Value = Choose(i + 1, "AL", "BR", "LA", "ST")
-            sh.Cells(i + 17, 1).Value = Choose(i + 1, "AL", "BR", "LA", "ST")
-            sh.Cells(i + 17, 2).Value = BTS_T(i + 61)
-            sh.Cells(i + 17, 3).Value = Choose(i + 1, "AL", "BR", "LA", "ST")
+            sh.Cells(i + 9, 2).Value = Choose(i + 1, "AL", "BR", "LA", "ST")
+            sh.Cells(i + 17, 2).Value = Choose(i + 1, "AL", "BR", "LA", "ST")
+            sh.Cells(i + 17, 3).Value = BTS_T(i + 61)
+            sh.Cells(i + 17, 4).Value = Choose(i + 1, "AL", "BR", "LA", "ST")
         Next i
-        sh.Range("A27").Value = BTS_T(40)
-        sh.Range("B27").Value = BTS_T(17)
-        sh.Range("A37").Value = BTS_T(40)
-        sh.Range("B37").Value = BTS_T(18)
+        sh.Range("B27").Value = BTS_T(40)
+        sh.Range("C27").Value = BTS_T(17)
+        sh.Range("B37").Value = BTS_T(40)
+        sh.Range("C37").Value = BTS_T(18)
         For i = 0 To 4
-            sh.Cells(i + 28, 1).Value = Choose(i + 1, "40", "45", "50", "55", "60")
-            sh.Cells(i + 38, 1).Value = Choose(i + 1, "00", "30", "45", "60", "90")
+            sh.Cells(i + 28, 2).Value = Choose(i + 1, "40", "45", "50", "55", "60")
+            sh.Cells(i + 38, 2).Value = Choose(i + 1, "00", "30", "45", "60", "90")
         Next i
-        sh.Range("A47").Value = BTS_T(10)
-        sh.Range("B47").Value = "BTS.XX.MM.DDAA.NNN"
+        sh.Range("B47").Value = BTS_T(10)
+        sh.Range("C47").Value = "BTS.XX.MM.DDAA.NNN"
     End If
-    sh.Columns("A").ColumnWidth = 19
-    sh.Columns("B").ColumnWidth = 37
-    sh.Columns("C").ColumnWidth = 24
-    EnsureName "BTSGroups", "'" & sh.Name & "'!$A$2:$A$5"
-    EnsureName "BTSMats", "'" & sh.Name & "'!$A$9:$A$15"
-    EnsureName "BTSMarks", "'" & sh.Name & "'!$B$17:$B$26"
-    EnsureName "BTSDiam", "'" & sh.Name & "'!$A$28:$A$36"
-    EnsureName "BTSAngles", "'" & sh.Name & "'!$A$38:$A$46"
+    sh.Columns("B").ColumnWidth = 19
+    sh.Columns("C").ColumnWidth = 37
+    sh.Columns("D").ColumnWidth = 24
+    EnsureName "BTSGroups", "'" & sh.Name & "'!$B$2:$B$5"
+    EnsureName "BTSMats", "'" & sh.Name & "'!$B$9:$B$15"
+    EnsureName "BTSMarks", "'" & sh.Name & "'!$C$17:$C$26"
+    EnsureName "BTSDiam", "'" & sh.Name & "'!$B$28:$B$36"
+    EnsureName "BTSAngles", "'" & sh.Name & "'!$B$38:$B$46"
+    BTS_NumberReference
+End Sub
+
+
+Private Sub BTS_EnsureNumberColumn(ByVal sh As Worksheet, ByVal headerRow As Long)
+    ' Idempotent migration: insert once, preserving existing cells, formulas and hyperlinks.
+    If CStr(sh.Cells(headerRow, 1).Value) <> BTS_T(80) Then
+        If Application.WorksheetFunction.CountA(sh.Rows(headerRow)) > 0 Then
+            sh.Columns("A:A").Insert Shift:=xlToRight
+        End If
+    End If
+    sh.Cells(headerRow, 1).Value = BTS_T(80)
+    sh.Columns("A").ColumnWidth = 6
+    sh.Columns("A").HorizontalAlignment = xlCenter
+    sh.Columns("A").NumberFormat = "0"
+End Sub
+
+Private Sub BTS_NumberRows(ByVal sh As Worksheet, ByVal firstRow As Long, ByVal lastRow As Long, ByVal keyCol As Long)
+    ' Number only actual records. Blank rows are never numbered.
+    Dim r As Long, n As Long, values() As Variant
+    If lastRow < firstRow Then Exit Sub
+    ReDim values(1 To lastRow - firstRow + 1, 1 To 1)
+    For r = firstRow To lastRow
+        If Len(Trim$(CStr(sh.Cells(r, keyCol).Value2))) > 0 Then
+            n = n + 1
+            values(r - firstRow + 1, 1) = n
+        End If
+    Next r
+    sh.Range(sh.Cells(firstRow, 1), sh.Cells(lastRow, 1)).Value = values
+End Sub
+
+Private Sub BTS_NumberList(ByVal sh As Worksheet)
+    BTS_NumberRows sh, 2, Application.Max(EndRow(sh, 1), EndRow(sh, LIST_CODE)), LIST_CODE
+End Sub
+
+Private Sub BTS_NumberReference()
+    Dim sh As Worksheet, bounds As Variant, item As Variant
+    Set sh = S(9)
+    bounds = Array(Array(1, 5), Array(8, 15), Array(16, 26), Array(27, 36), Array(37, 46), Array(47, Application.Max(54, EndRow(sh, 2), EndRow(sh, 1))))
+    For Each item In bounds
+        sh.Cells(item(0), 1).Value = BTS_T(80)
+        sh.Cells(item(0), 1).Font.Bold = True
+        sh.Cells(item(0), 1).Interior.Color = RGB(227, 232, 236)
+        BTS_NumberRows sh, CLng(item(0)) + 1, CLng(item(1)), LIST_CODE
+    Next item
+End Sub
+
+Private Sub BTS_InitList(ByVal sh As Worksheet, ByVal isPart As Boolean)
+    BTS_EnsureNumberColumn sh, 1
+    If isPart Then
+        LayoutHeader sh, Array(BTS_T(80), BTS_T(10), BTS_T(11), BTS_T(12))
+        sh.Columns("B").ColumnWidth = 37
+        sh.Columns("C").ColumnWidth = 48
+        sh.Columns("D").ColumnWidth = 21
+        MakeButton sh, "btnDelete", BTS_T(25), "BTS_DeleteSelected", "F2", 140
+    Else
+        LayoutHeader sh, Array(BTS_T(80), BTS_T(10), BTS_T(11))
+        sh.Columns("B:C").ColumnWidth = 53
+        MakeButton sh, "btnDelete", BTS_T(25), "BTS_DeleteSelected", "E2", 140
+    End If
+    BTS_NumberList sh
+End Sub
+
+Private Sub BTS_TreeColumns(ByVal sh As Worksheet)
+    ' Native column outline. Root B and number A never disappear.
+    ' Keep existing state when the groups are already in place.
+    Dim c As Long
+    If sh.Columns("C").OutlineLevel <> 2 Or sh.Columns("G").OutlineLevel <> 6 Then
+        sh.Columns("B:G").ClearOutline
+        sh.Columns("B:G").Hidden = False
+        sh.Outline.SummaryColumn = xlLeft
+        For c = 3 To MAX_DEPTH + 1
+            sh.Range(sh.Columns(c), sh.Columns(MAX_DEPTH + 1)).Group
+        Next c
+        sh.Outline.ShowLevels ColumnLevels:=1
+    End If
+    sh.Columns("A:B").Hidden = False
+    sh.Columns("H:J").Hidden = False
+    sh.Columns("K:L").Hidden = True
+End Sub
+
+Private Sub BTS_InitFamily(ByVal sh As Worksheet)
+    BTS_EnsureNumberColumn sh, 1
+    LayoutHeader sh, Array(BTS_T(80), "I", "II", "III", "IV", "V", "VI", BTS_T(11), BTS_T(12), BTS_T(13))
+    sh.Columns("B:G").ColumnWidth = 29
+    sh.Columns("H").ColumnWidth = 42
+    sh.Columns("I").ColumnWidth = 19
+    sh.Columns("J").ColumnWidth = 11
+    sh.Columns("M").Hidden = False
+    BTS_TreeColumns sh
+    MakeButton sh, "btnDelete", BTS_T(25), "BTS_DeleteSelected", "N2", 140
 End Sub
 
 Private Sub BTS_FormInit()
@@ -352,9 +443,9 @@ Private Sub BTS_MarkChoices()
     data.Range("AH2:AH1000").ClearContents
     p = 2
     For r = 17 To 26
-        If code <> "" And StrComp(Trim$(CStr(ref.Cells(r, 1).Value)), code, vbTextCompare) = 0 Then
-            If Trim$(CStr(ref.Cells(r, 2).Value)) <> "" Then
-                data.Cells(p, 34).Value = ref.Cells(r, 2).Value
+        If code <> "" And StrComp(Trim$(CStr(ref.Cells(r, 2).Value)), code, vbTextCompare) = 0 Then
+            If Trim$(CStr(ref.Cells(r, 3).Value)) <> "" Then
+                data.Cells(p, 34).Value = ref.Cells(r, 3).Value
                 p = p + 1
             End If
         End If
@@ -407,48 +498,87 @@ Private Sub BTS_RefreshPreview()
     End If
 End Sub
 
+Private Function OrderField(ByVal sh As Worksheet, ByVal index As Long) As Range
+    ' The selector never uses grouped hierarchy columns C:G.
+    Set OrderField = sh.Range(Choose(index, "B2", "H2", "I2", "J2", "B4", "H4"))
+End Function
+
 Private Sub BTS_OrderInit()
-    Dim sh As Worksheet
+    Dim sh As Worksheet, fresh As Boolean, key As Variant, i As Long, oldData As Variant
     Set sh = S(8)
-    If CStr(sh.Range("A1").Value) = "" Then LayoutHeader sh, Array(BTS_T(14), BTS_T(15), BTS_T(16), BTS_T(17), BTS_T(18), BTS_T(19), BTS_T(10), BTS_T(13))
-    sh.Columns("A:F").ColumnWidth = 16
-    sh.Columns("G").ColumnWidth = 40
-    sh.Columns("H").ColumnWidth = 17
-    sh.Range("D2:E2").NumberFormat = "00"
-    sh.Range("F2").NumberFormat = "@"
-    sh.Range("G2").Formula = "=IFERROR(IF(OR(A2="""",B2="""",D2="""",E2="""",F2="""",AND(MOD(VALUE(F2),10)=0,C2="""")),"""",""BTS.""&A2&"".""&B2&IF(MOD(VALUE(F2),10)=0,C2,"""")&"".""&TEXT(VALUE(D2),""00"")&TEXT(VALUE(E2),""00"")&"".""&TEXT(VALUE(F2),""000"")),"""")"
-    If IsEmpty(sh.Range("H2").Value) Then sh.Range("H2").Value = 1
-    sh.Range("A7:I7").Value = Array("I", "II", "III", "IV", "V", "VI", BTS_T(11), BTS_T(12), BTS_T(13))
-    sh.Range("L7").Value = BTS_T(25)
-    sh.Columns("L").ColumnWidth = 18
-    sh.Range("A7:I7").Font.Bold = True
-    sh.Range("A7:I7").Interior.Color = RGB(227, 232, 236)
-    sh.Columns("A:F").ColumnWidth = 29
-    sh.Columns("G").ColumnWidth = 44
-    sh.Columns("H").ColumnWidth = 20
-    sh.Columns("I").ColumnWidth = 14
-    sh.Columns("J:K").Hidden = True
-    MakeButton sh, "orderAdd", BTS_T(28), "BTS_AddToOrder", "L2", 120
-    MakeButton sh, "orderClear", BTS_T(29), "BTS_ClearOrder", "N2", 120
-    MakeButton sh, "orderExport", BTS_T(30), "BTS_ExportOrder", "P2", 148
-    MakeButton sh, "orderDelete", BTS_T(25), "BTS_DeleteSelected", "L7", 148
+    fresh = (CStr(sh.Range("A7").Value) <> BTS_T(80))
+    If fresh Then
+        oldData = sh.Range("A2:H2").Value2
+        BTS_EnsureNumberColumn sh, 7
+        sh.Range("A1:M6").UnMerge
+        sh.Range("A1:M6").Clear
+        For i = 1 To 6
+            OrderField(sh, i).NumberFormat = "@"
+            OrderField(sh, i).Value2 = oldData(1, i)
+        Next i
+        sh.Range("I4").Value2 = oldData(1, 8)
+    End If
+    sh.Range("B1").Value = BTS_T(14)
+    sh.Range("H1").Value = BTS_T(15)
+    sh.Range("I1").Value = BTS_T(16)
+    sh.Range("J1").Value = BTS_T(17)
+    sh.Range("B3").Value = BTS_T(18)
+    sh.Range("H3").Value = BTS_T(19)
+    sh.Range("I3").Value = BTS_T(13)
+    sh.Range("B5").Value = BTS_T(10)
+    sh.Range("B2,H2,I2,J2,B4,H4").NumberFormat = "@"
+    If IsEmpty(sh.Range("I4").Value) Then sh.Range("I4").Value = 1
+    sh.Range("H5").Value = CodeFrom(sh)
+    sh.Range("A7:J7").Value = Array(BTS_T(80), "I", "II", "III", "IV", "V", "VI", BTS_T(11), BTS_T(12), BTS_T(13))
+    sh.Range("M7").Value = BTS_T(25)
+    sh.Columns("B:G").ColumnWidth = 29
+    sh.Columns("H").ColumnWidth = 44
+    sh.Columns("I").ColumnWidth = 20
+    sh.Columns("J").ColumnWidth = 17
+    sh.Columns("M").ColumnWidth = 25
+    sh.Columns("M").Hidden = False
+    With sh.Range("A7:J7,M7,B1,H1:J1,B3,H3:I3,B5")
+        .Font.Bold = True
+        .Interior.Color = RGB(227, 232, 236)
+        .WrapText = True
+        .RowHeight = 26
+    End With
+    sh.Rows("6").RowHeight = 30
+    BTS_TreeColumns sh
+    For Each key In Array("orderAdd", "orderClear", "orderExport", "orderDelete")
+        On Error Resume Next
+        sh.Shapes(CStr(key)).Delete
+        On Error GoTo 0
+    Next key
+    MakeButton sh, "orderAdd", BTS_T(28), "BTS_AddToOrder", "B6", 120
+    MakeButton sh, "orderClear", BTS_T(29), "BTS_ClearOrder", "H6", 120
+    MakeButton sh, "orderExport", BTS_T(30), "BTS_ExportOrder", "M6", 148
     BTS_UpdateOrderLists
 End Sub
 
 Private Function CodeFrom(ByVal sh As Worksheet) As String
-    ' Order keeps its original A2:F2 form; creation uses B4:G4.
+    ' Order uses stable fields outside the column outline; creation still uses B4:G4.
     Dim a As String, b As String, c As String, d As String, e As String, f As String, rr As Long, offset As Long, isUnit As Boolean
     rr = 2
     If sh.Name = BTS_T(1) Then
         rr = 4
         offset = 1
     End If
-    a = Trim$(CStr(sh.Cells(rr, 1 + offset).Value2))
-    b = Trim$(CStr(sh.Cells(rr, 2 + offset).Value2))
-    c = Trim$(CStr(sh.Cells(rr, 3 + offset).Value2))
-    d = Trim$(CStr(sh.Cells(rr, 4 + offset).Value2))
-    e = Trim$(CStr(sh.Cells(rr, 5 + offset).Value2))
-    f = Trim$(CStr(sh.Cells(rr, 6 + offset).Value2))
+    If sh.Name = BTS_T(8) Then
+        a = Trim$(CStr(OrderField(sh, 1).Value2))
+        b = Trim$(CStr(OrderField(sh, 2).Value2))
+        c = Trim$(CStr(OrderField(sh, 3).Value2))
+        d = Trim$(CStr(OrderField(sh, 4).Value2))
+        e = Trim$(CStr(OrderField(sh, 5).Value2))
+        f = Trim$(CStr(OrderField(sh, 6).Value2))
+    Else
+        a = Trim$(CStr(sh.Cells(rr, 1 + offset).Value2))
+        b = Trim$(CStr(sh.Cells(rr, 2 + offset).Value2))
+        c = Trim$(CStr(sh.Cells(rr, 3 + offset).Value2))
+        d = Trim$(CStr(sh.Cells(rr, 4 + offset).Value2))
+        e = Trim$(CStr(sh.Cells(rr, 5 + offset).Value2))
+        f = Trim$(CStr(sh.Cells(rr, 6 + offset).Value2))
+    End If
     If a = "" Or Len(b) <> 2 Or d = "" Or e = "" Or f = "" Then Exit Function
     If Len(f) > 3 Or Len(d) > 2 Or Len(e) > 2 Then Exit Function
     If f Like "*[!0-9]*" Or d Like "*[!0-9]*" Or e Like "*[!0-9]*" Then Exit Function
@@ -492,7 +622,7 @@ Private Function ValidMark(ByVal markName As String, ByVal matCode As String) As
     Set sh = S(9)
     If Trim$(markName) = "" Or Trim$(matCode) = "" Then Exit Function
     For rowN = 17 To 26
-        If StrComp(Trim$(CStr(sh.Cells(rowN, 2).Value)), Trim$(markName), vbTextCompare) = 0 And StrComp(Trim$(CStr(sh.Cells(rowN, 1).Value)), Trim$(matCode), vbTextCompare) = 0 Then
+        If StrComp(Trim$(CStr(sh.Cells(rowN, 3).Value)), Trim$(markName), vbTextCompare) = 0 And StrComp(Trim$(CStr(sh.Cells(rowN, 2).Value)), Trim$(matCode), vbTextCompare) = 0 Then
             ValidMark = True
             Exit Function
         End If
@@ -635,11 +765,11 @@ Private Sub SaveCurrent(ByVal overwrite As Boolean)
             targetRow = PartRow(code)
             If targetRow = 0 Then MsgBox BTS_T(49), vbExclamation: Exit Sub
         Else
-            targetRow = NextFree(S(2), 1)
+            targetRow = NextFree(S(2), LIST_CODE)
         End If
-        S(2).Cells(targetRow, 1).Value = code
-        S(2).Cells(targetRow, 2).Value = CStr(sh.Range("C6").Value)
-        S(2).Cells(targetRow, 3).Value = CStr(sh.Range("C7").Value)
+        S(2).Cells(targetRow, LIST_CODE).Value = code
+        S(2).Cells(targetRow, 3).Value = CStr(sh.Range("C6").Value)
+        S(2).Cells(targetRow, 4).Value = CStr(sh.Range("C7").Value)
     End If
     BTS_RebuildAll
     MsgBox BTS_T(37), vbInformation
@@ -655,8 +785,8 @@ Private Sub BTS_ComponentChoices()
     p = 2
     q = 2
     Set sh = S(2)
-    For i = 2 To EndRow(sh, 1)
-        code = Trim$(CStr(sh.Cells(i, 1).Value))
+    For i = 2 To EndRow(sh, LIST_CODE)
+        code = Trim$(CStr(sh.Cells(i, LIST_CODE).Value))
         If code <> "" Then
             data.Cells(p, 35).Value = code
             p = p + 1
@@ -670,8 +800,8 @@ Private Sub BTS_ComponentChoices()
         End If
     Next i
     Set sh = S(7)
-    For i = 2 To EndRow(sh, 1)
-        code = Trim$(CStr(sh.Cells(i, 1).Value))
+    For i = 2 To EndRow(sh, LIST_CODE)
+        code = Trim$(CStr(sh.Cells(i, LIST_CODE).Value))
         If code <> "" Then
             data.Cells(q, 36).Value = code
             q = q + 1
@@ -923,9 +1053,9 @@ Private Sub CopyLink(ByVal code As String, ByVal dest As Range)
     Dim p As Long, linkAddress As String, innerAddress As String
     p = PartRow(code)
     If p > 0 Then
-        If S(2).Cells(p, 1).Hyperlinks.Count > 0 Then
-            linkAddress = S(2).Cells(p, 1).Hyperlinks(1).Address
-            innerAddress = S(2).Cells(p, 1).Hyperlinks(1).SubAddress
+        If S(2).Cells(p, LIST_CODE).Hyperlinks.Count > 0 Then
+            linkAddress = S(2).Cells(p, LIST_CODE).Hyperlinks(1).Address
+            innerAddress = S(2).Cells(p, LIST_CODE).Hyperlinks(1).SubAddress
         End If
     Else
         p = AssemblyRow(code)
@@ -935,9 +1065,9 @@ Private Sub CopyLink(ByVal code As String, ByVal dest As Range)
         Else
             p = StandardRow(code)
             If p > 0 Then
-                If S(7).Cells(p, 1).Hyperlinks.Count > 0 Then
-                    linkAddress = S(7).Cells(p, 1).Hyperlinks(1).Address
-                    innerAddress = S(7).Cells(p, 1).Hyperlinks(1).SubAddress
+                If S(7).Cells(p, LIST_CODE).Hyperlinks.Count > 0 Then
+                    linkAddress = S(7).Cells(p, LIST_CODE).Hyperlinks(1).Address
+                    innerAddress = S(7).Cells(p, LIST_CODE).Hyperlinks(1).SubAddress
                 End If
             End If
         End If
@@ -951,8 +1081,8 @@ Private Sub SyncTreeLinks()
     Dim i As Long, sh As Worksheet, r As Long, d As Long, code As String, p As Long
     For i = 3 To 6
         Set sh = S(i)
-        For r = 2 To EndRow(sh, 11)
-            For d = 1 To MAX_DEPTH
+        For r = 2 To EndRow(sh, TREE_PATH)
+            For d = 2 To MAX_DEPTH + 1
                 If sh.Cells(r, d).Hyperlinks.Count > 0 Then
                     code = CStr(sh.Cells(r, d).Value)
                     p = AssemblyRow(code)
@@ -962,8 +1092,8 @@ Private Sub SyncTreeLinks()
                     Else
                         p = PartRow(code)
                         If p > 0 Then
-                            If S(2).Cells(p, 1).Hyperlinks.Count = 0 Then
-                                S(2).Hyperlinks.Add Anchor:=S(2).Cells(p, 1), Address:=sh.Cells(r, d).Hyperlinks(1).Address, SubAddress:=sh.Cells(r, d).Hyperlinks(1).SubAddress, TextToDisplay:=code
+                            If S(2).Cells(p, LIST_CODE).Hyperlinks.Count = 0 Then
+                                S(2).Hyperlinks.Add Anchor:=S(2).Cells(p, LIST_CODE), Address:=sh.Cells(r, d).Hyperlinks(1).Address, SubAddress:=sh.Cells(r, d).Hyperlinks(1).SubAddress, TextToDisplay:=code
                             End If
                         End If
                     End If
@@ -986,16 +1116,17 @@ Private Sub DrawNode(ByVal sh As Worksheet, ByVal code As String, ByVal parent A
     If depth > MAX_DEPTH Then Err.Raise vbObjectError + 200, , "Assembly depth exceeds 6 columns"
     If orderMode And IsExcluded(root, path) Then Exit Sub
     startRow = rowOut
-    sh.Cells(startRow, depth).Value = code
-    sh.Cells(startRow, 7).Value = ItemName(code)
-    sh.Cells(startRow, 8).Value = MaterialMark(code)
-    If parent <> "" Then sh.Cells(startRow, 9).Value = multiplier
-    If orderMode Then sh.Cells(startRow, 9).Value = multiplier
-    sh.Cells(startRow, 10).Value = parent
-    sh.Cells(startRow, 11).Value = path
-    CopyLink code, sh.Cells(startRow, depth)
+    sh.Cells(startRow, 1).Value = startRow - IIf(orderMode, ORDER_FIRST, 2) + 1
+    sh.Cells(startRow, depth + 1).Value = code
+    sh.Cells(startRow, TREE_NAME).Value = ItemName(code)
+    sh.Cells(startRow, TREE_MATERIAL).Value = MaterialMark(code)
+    If parent <> "" Then sh.Cells(startRow, TREE_QTY).Value = multiplier
+    If orderMode Then sh.Cells(startRow, TREE_QTY).Value = multiplier
+    sh.Cells(startRow, TREE_PARENT).Value = parent
+    sh.Cells(startRow, TREE_PATH).Value = path
+    CopyLink code, sh.Cells(startRow, depth + 1)
     If IsAssembly(code) Then
-        With sh.Range(sh.Cells(startRow, depth), sh.Cells(startRow, 9))
+        With sh.Range(sh.Cells(startRow, depth + 1), sh.Cells(startRow, TREE_QTY))
             .Interior.Color = RGB(236, 240, 242)
         End With
     End If
@@ -1012,12 +1143,13 @@ End Sub
 
 Private Sub ResetTree(ByVal sh As Worksheet, ByVal firstRow As Long)
     Dim last As Long
-    last = Application.Max(EndRow(sh, 11), firstRow + 1)
+    last = Application.Max(EndRow(sh, TREE_PATH), firstRow + 1)
     On Error Resume Next
     sh.Rows(firstRow & ":" & last).ClearOutline
-    sh.Range("A" & firstRow & ":K" & last).Hyperlinks.Delete
-    sh.Range("A" & firstRow & ":K" & last).ClearContents
-    sh.Range("A" & firstRow & ":I" & last).Interior.Pattern = xlNone
+    sh.Rows(firstRow & ":" & last).Hidden = False
+    sh.Range("A" & firstRow & ":L" & last).Hyperlinks.Delete
+    sh.Range("A" & firstRow & ":L" & last).ClearContents
+    sh.Range("A" & firstRow & ":J" & last).Interior.Pattern = xlNone
     On Error GoTo 0
 End Sub
 
@@ -1065,10 +1197,15 @@ Private Sub DrawFamily(ByVal id As Long)
 End Sub
 
 Public Sub BTS_RebuildAll()
-    Dim i As Long
+    Dim i As Long, eventsBefore As Boolean
+    eventsBefore = Application.EnableEvents
     On Error GoTo Failed
     Application.ScreenUpdating = False
+    Application.EnableEvents = False
     If ThisWorkbook.Worksheets("_BTS_DATA").Visible <> xlSheetVeryHidden Then ThisWorkbook.Worksheets("_BTS_DATA").Visible = xlSheetVeryHidden
+    BTS_NumberList S(2)
+    BTS_NumberList S(7)
+    BTS_NumberReference
     SyncTreeLinks
     BTS_ComponentChoices
     For i = 3 To 6
@@ -1077,6 +1214,7 @@ Public Sub BTS_RebuildAll()
     BTS_RebuildOrder
     BTS_UpdateOrderLists
 Clean:
+    Application.EnableEvents = eventsBefore
     Application.ScreenUpdating = True
     Exit Sub
 Failed:
@@ -1102,7 +1240,7 @@ Public Sub BTS_DeleteSelected()
     If sh.Name = BTS_T(8) Then idx = 8
     If r < 2 Then Exit Sub
     If idx = 2 Or idx = 7 Then
-        code = CStr(sh.Cells(r, 1).Value)
+        code = CStr(sh.Cells(r, LIST_CODE).Value)
         If code = "" Then Exit Sub
         For rr = 2 To EndRow(DB, 1)
             If CStr(DB.Cells(rr, 1).Value) <> "" Then
@@ -1120,7 +1258,8 @@ Public Sub BTS_DeleteSelected()
         Exit Sub
     End If
     If idx = 8 Then
-        path = CStr(sh.Cells(r, 11).Value)
+        If r < ORDER_FIRST Then Exit Sub
+        path = CStr(sh.Cells(r, TREE_PATH).Value)
         If path = "" Then Exit Sub
         root = Split(path, "/")(0)
         If MsgBox(BTS_T(53), vbYesNo + vbQuestion) <> vbYes Then Exit Sub
@@ -1140,8 +1279,8 @@ Public Sub BTS_DeleteSelected()
         Exit Sub
     End If
     If sh.Name = BTS_T(3) Or sh.Name = BTS_T(4) Or sh.Name = BTS_T(5) Or sh.Name = BTS_T(6) Then
-        code = CStr(sh.Cells(r, 11).Value)
-        parent = CStr(sh.Cells(r, 10).Value)
+        code = CStr(sh.Cells(r, TREE_PATH).Value)
+        parent = CStr(sh.Cells(r, TREE_PARENT).Value)
         If code = "" Then Exit Sub
         If parent <> "" Then
             Dim arr As Variant
@@ -1150,7 +1289,7 @@ Public Sub BTS_DeleteSelected()
             If MsgBox(BTS_T(54) & code & vbCrLf & BTS_T(55) & parent, vbYesNo + vbQuestion) <> vbYes Then Exit Sub
             RemoveCompEdges parent, code
         Else
-            code = CStr(sh.Cells(r, 1).Value)
+            code = CStr(sh.Cells(r, LIST_CODE).Value)
             If MsgBox(BTS_T(52) & code, vbYesNo + vbExclamation) <> vbYes Then Exit Sub
             rr = AssemblyRow(code)
             If rr > 0 Then DB.Range("A" & rr & ":E" & rr).Delete Shift:=xlUp
@@ -1176,8 +1315,8 @@ Private Sub BTS_RebuildOrder()
     Dim roots() As String
     Set sh = S(8)
     Set data = DB
-    ResetTree sh, 8
-    sh.Range("L8:L10000").ClearContents
+    sh.Range(sh.Cells(ORDER_FIRST, TREE_DELETE), sh.Cells(Application.Max(ORDER_FIRST, EndRow(sh, TREE_DELETE)), TREE_DELETE)).ClearContents
+    ResetTree sh, ORDER_FIRST
     n = 0
     For i = 2 To EndRow(data, 11)
         If CStr(data.Cells(i, 11).Value) <> "" Then n = n + 1
@@ -1202,17 +1341,17 @@ Private Sub BTS_RebuildOrder()
             Next j
         Next i
     End If
-    rowN = 8
+    rowN = ORDER_FIRST
     sh.Outline.SummaryRow = xlAbove
     For i = 1 To n
         code = roots(i)
         j = Locate(data, 11, code)
         If j > 0 Then DrawNode sh, code, "", code, code, 1, CDbl(data.Cells(j, 12).Value), rowN, True
     Next i
-    If rowN > 8 Then
-        sh.Range("L8:L" & CStr(rowN - 1)).Value = BTS_T(25)
-        sh.Range("L8:L" & CStr(rowN - 1)).Font.Color = RGB(95, 39, 39)
-        sh.Range("L8:L" & CStr(rowN - 1)).HorizontalAlignment = xlCenter
+    If rowN > ORDER_FIRST Then
+        sh.Range(sh.Cells(ORDER_FIRST, TREE_DELETE), sh.Cells(rowN - 1, TREE_DELETE)).Value = BTS_T(25)
+        sh.Range(sh.Cells(ORDER_FIRST, TREE_DELETE), sh.Cells(rowN - 1, TREE_DELETE)).Font.Color = RGB(95, 39, 39)
+        sh.Range(sh.Cells(ORDER_FIRST, TREE_DELETE), sh.Cells(rowN - 1, TREE_DELETE)).HorizontalAlignment = xlCenter
     End If
 End Sub
 
@@ -1221,8 +1360,8 @@ Public Sub BTS_AddToOrder()
     Set sh = S(8)
     code = CodeFrom(sh)
     If Not ExistsCode(code) Then MsgBox BTS_T(41), vbExclamation: Exit Sub
-    If Not IsNumeric(sh.Range("H2").Value) Then MsgBox BTS_T(56), vbExclamation: Exit Sub
-    qty = CDbl(sh.Range("H2").Value)
+    If Not IsNumeric(sh.Range("I4").Value) Then MsgBox BTS_T(56), vbExclamation: Exit Sub
+    qty = CDbl(sh.Range("I4").Value)
     If qty < 1 Or Fix(qty) <> qty Then MsgBox BTS_T(56), vbExclamation: Exit Sub
     r = Locate(DB, 11, code)
     If r = 0 Then r = NextFree(DB, 11): DB.Cells(r, 11).Value = code
@@ -1274,21 +1413,23 @@ Public Sub BTS_ExportOrder()
     Set output = Application.Workbooks.Add(xlWBATWorksheet)
     Set sh = output.Worksheets(1)
     sh.Name = "BTS_Order"
-    sh.Range("A1:E1").Value = Array(BTS_T(60), BTS_T(10), BTS_T(11), BTS_T(12), BTS_T(13))
+    sh.Range("A1:F1").Value = Array(BTS_T(80), BTS_T(60), BTS_T(10), BTS_T(11), BTS_T(12), BTS_T(13))
     r = 2
     For Each k In totals.Keys
-        sh.Cells(r, 1).Value = IIf(PartRow(CStr(k)) > 0, BTS_T(38), BTS_T(70))
-        sh.Cells(r, 2).Value = CStr(k)
-        sh.Cells(r, 3).Value = ItemName(CStr(k))
-        sh.Cells(r, 4).Value = MaterialMark(CStr(k))
-        sh.Cells(r, 5).Value = totals(k)
+        sh.Cells(r, 2).Value = IIf(PartRow(CStr(k)) > 0, BTS_T(38), BTS_T(70))
+        sh.Cells(r, 3).Value = CStr(k)
+        sh.Cells(r, 4).Value = ItemName(CStr(k))
+        sh.Cells(r, 5).Value = MaterialMark(CStr(k))
+        sh.Cells(r, 6).Value = totals(k)
         r = r + 1
     Next k
     last = r - 1
-    sh.Range("A1:E" & last).Sort Key1:=sh.Range("A2"), Order1:=xlAscending, Key2:=sh.Range("B2"), Order2:=xlAscending, Header:=xlYes
-    sh.Columns("A:E").AutoFit
-    sh.Range("A1:E1").Interior.Color = RGB(227, 232, 236)
-    sh.Range("A1:E" & last).Borders.LineStyle = xlContinuous
+    sh.Range("A1:F" & last).Sort Key1:=sh.Range("B2"), Order1:=xlAscending, Key2:=sh.Range("C2"), Order2:=xlAscending, Header:=xlYes
+    BTS_NumberRows sh, 2, last, 3
+    sh.Columns("A:F").AutoFit
+    sh.Columns("A").ColumnWidth = 6
+    sh.Range("A1:F1").Interior.Color = RGB(227, 232, 236)
+    sh.Range("A1:F" & last).Borders.LineStyle = xlContinuous
     fn = ThisWorkbook.Path & Application.PathSeparator & "BTS_Order_" & Format$(Now, "yyyymmdd_hhnnss") & ".xlsx"
     output.SaveAs Filename:=fn, FileFormat:=xlOpenXMLWorkbook
     output.Close SaveChanges:=False
@@ -1310,20 +1451,21 @@ Public Sub BTS_UpdateOrderLists()
             code = CStr(data.Cells(i, 1).Value)
             If code <> "" Then Call AddOption(code, sh, c, entries)
         Next i
-        For i = 2 To EndRow(S(2), 1)
-            code = CStr(S(2).Cells(i, 1).Value)
+        For i = 2 To EndRow(S(2), LIST_CODE)
+            code = CStr(S(2).Cells(i, LIST_CODE).Value)
             If code <> "" Then Call AddOption(code, sh, c, entries)
         Next i
         data.Range(data.Cells(2, 26 + c), data.Cells(3000, 26 + c)).ClearContents
         p = 2
         For Each key In entries.Keys
+            data.Cells(p, 26 + c).NumberFormat = "@"
             data.Cells(p, 26 + c).Value = key
             p = p + 1
         Next key
         If p = 2 Then data.Cells(p, 26 + c).Value = ""
         nm = "BTSOrder" & CStr(c)
         EnsureName nm, "'_BTS_DATA'!" & data.Range(data.Cells(2, 26 + c), data.Cells(Application.Max(p - 1, 2), 26 + c)).Address
-        PutList sh.Cells(2, c), nm
+        PutList OrderField(sh, c), nm
     Next c
 End Sub
 
@@ -1338,7 +1480,10 @@ Private Sub AddOption(ByVal code As String, ByVal formSh As Worksheet, ByVal tar
     v(5) = Right$(ar(3), 2)
     v(6) = ar(4)
     For x = 1 To targetIndex - 1
-        raw = Trim$(CStr(formSh.Cells(2, x).Value))
+        raw = Trim$(CStr(OrderField(formSh, x).Value))
+        If (x = 4 Or x = 5 Or x = 6) And raw <> "" Then
+            If IsNumeric(raw) Then raw = Format$(CLng(raw), IIf(x = 6, "000", "00"))
+        End If
         If raw <> "" And raw <> v(x) Then Exit Sub
     Next x
     If Not dict.Exists(v(targetIndex)) Then dict.Add v(targetIndex), True
@@ -1349,11 +1494,19 @@ Public Sub BTS_Changed(ByVal Sh As Object, ByVal Target As Range)
     On Error GoTo Failed
     Application.EnableEvents = False
     If Sh.Name = BTS_T(8) Then
-        If Not Intersect(Target, Sh.Range("A2:F2")) Is Nothing Then BTS_UpdateOrderLists
-    ElseIf Sh.Name = BTS_T(7) Then
-        If Not Intersect(Target, Sh.Range("A2:B2000")) Is Nothing Then BTS_ComponentChoices
+        If Not Intersect(Target, Sh.Range("B2,H2,I2,J2,B4,H4")) Is Nothing Then
+            BTS_UpdateOrderLists
+            Sh.Range("H5").Value = CodeFrom(Sh)
+        End If
+    ElseIf Sh.Name = BTS_T(2) Or Sh.Name = BTS_T(7) Then
+        If Not Intersect(Target, Sh.Range("A2:D" & Sh.Rows.Count)) Is Nothing Then
+            BTS_NumberList Sh
+            BTS_ComponentChoices
+            BTS_UpdateOrderLists
+        End If
     ElseIf Sh.Name = BTS_T(9) Then
-        If Not Intersect(Target, Sh.Range("A17:B26")) Is Nothing Then
+        If Not Intersect(Target, Sh.Range("A1:D" & Sh.Rows.Count)) Is Nothing Then
+            BTS_NumberReference
             If Not BTS_FormIsAssembly() Then BTS_MarkChoices
         End If
     ElseIf Sh.Name = BTS_T(1) Then

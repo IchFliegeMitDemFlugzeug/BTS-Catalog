@@ -14,7 +14,7 @@ End Sub
 Private Sub Workbook_SheetBeforeDoubleClick(ByVal Sh As Object, ByVal Target As Range, Cancel As Boolean)
     ' An action in the order sheet removes only the selected order branch.
     If Sh.Name <> BTS_T(8) Then Exit Sub
-    If Target.Column <> 12 Or Target.Row < 8 Then Exit Sub
+    If Target.Column <> 13 Or Target.Row < 8 Then Exit Sub
     Cancel = True
     Sh.Activate
     Target.Select
