@@ -118,6 +118,7 @@ Private Sub MakeButton(ByVal sh As Worksheet, ByVal key As String, ByVal label A
     obj.Left = sh.Range(atCell).Left
     obj.Top = sh.Range(atCell).Top
     obj.Width = widthPoints
+    obj.Placement = xlMove
     obj.OnAction = macroName
     obj.TextFrame.Characters.Text = label
     obj.Fill.ForeColor.RGB = RGB(227, 232, 236)
@@ -200,8 +201,9 @@ End Sub
 
 Private Sub BTS_ReferenceInit()
     ' Reference sheet uses a narrow vertical layout, never extra columns N and beyond.
-    Dim sh As Worksheet, i As Long
+    Dim sh As Worksheet, i As Long, firstLayout As Boolean, header As Variant
     Set sh = S(9)
+    firstLayout = (CStr(sh.Range("A1").Value) <> BTS_T(80))
     BTS_EnsureNumberColumn sh, 1
     If CStr(sh.Range("B1").Value) = "" Then
         sh.Range("B1").Value = BTS_T(40)
@@ -235,11 +237,12 @@ Private Sub BTS_ReferenceInit()
     sh.Columns("B").ColumnWidth = 19
     sh.Columns("C").ColumnWidth = 37
     sh.Columns("D").ColumnWidth = 24
-    EnsureName "BTSGroups", "'" & sh.Name & "'!$B$2:$B$5"
-    EnsureName "BTSMats", "'" & sh.Name & "'!$B$9:$B$15"
-    EnsureName "BTSMarks", "'" & sh.Name & "'!$C$17:$C$26"
-    EnsureName "BTSDiam", "'" & sh.Name & "'!$B$28:$B$36"
-    EnsureName "BTSAngles", "'" & sh.Name & "'!$B$38:$B$46"
+    ' Initial migration marks the six existing section headers. Later edits use the marker rows.
+    If firstLayout Or BTS_RefHeader(2) = 0 Then
+        For Each header In Array(1, 8, 16, 27, 37, 47)
+            sh.Cells(header, 1).Value = BTS_T(80)
+        Next header
+    End If
     BTS_NumberReference
 End Sub
 
@@ -275,16 +278,46 @@ Private Sub BTS_NumberList(ByVal sh As Worksheet)
     BTS_NumberRows sh, 2, Application.Max(EndRow(sh, 1), EndRow(sh, LIST_CODE)), LIST_CODE
 End Sub
 
-Private Sub BTS_NumberReference()
-    Dim sh As Worksheet, bounds As Variant, item As Variant
+Private Function BTS_RefHeader(ByVal section As Long) As Long
+    ' Header markers move with their rows during normal Excel insertion and deletion.
+    Dim sh As Worksheet, r As Long, n As Long
     Set sh = S(9)
-    bounds = Array(Array(1, 5), Array(8, 15), Array(16, 26), Array(27, 36), Array(37, 46), Array(47, Application.Max(54, EndRow(sh, 2), EndRow(sh, 1))))
-    For Each item In bounds
-        sh.Cells(item(0), 1).Value = BTS_T(80)
-        sh.Cells(item(0), 1).Font.Bold = True
-        sh.Cells(item(0), 1).Interior.Color = RGB(227, 232, 236)
-        BTS_NumberRows sh, CLng(item(0)) + 1, CLng(item(1)), LIST_CODE
-    Next item
+    For r = 1 To Application.Max(EndRow(sh, 1), EndRow(sh, 2))
+        If CStr(sh.Cells(r, 1).Value2) = BTS_T(80) Then
+            n = n + 1
+            If n = section Then BTS_RefHeader = r: Exit Function
+        End If
+    Next r
+End Function
+
+Private Sub BTS_NumberReference()
+    ' Keep each reference section numbered independently and rebuild its actual lookup range.
+    Dim sh As Worksheet, section As Long, first As Long, last As Long, nextHeader As Long, col As Long, nm As String
+    Set sh = S(9)
+    If BTS_RefHeader(6) = 0 Or BTS_RefHeader(7) <> 0 Then Err.Raise vbObjectError + 210, , "Reference section headers missing or duplicated"
+    For section = 1 To 6
+        first = BTS_RefHeader(section)
+        nextHeader = BTS_RefHeader(section + 1)
+        If nextHeader = 0 Then
+            last = Application.Max(first + 1, EndRow(sh, 1), EndRow(sh, 2))
+        Else
+            last = nextHeader - 1
+        End If
+        sh.Cells(first, 1).Font.Bold = True
+        sh.Cells(first, 1).Interior.Color = RGB(227, 232, 236)
+        BTS_NumberRows sh, first + 1, last, LIST_CODE
+        If section <= 5 Then
+            nm = Choose(section, "BTSGroups", "BTSMats", "BTSMarks", "BTSDiam", "BTSAngles")
+            col = IIf(section = 3, 3, 2)
+            If first < last Then
+                EnsureName nm, "'" & sh.Name & "'!" & sh.Range(sh.Cells(first + 1, col), sh.Cells(last, col)).Address
+            Else
+                ' Empty section: use a blank helper, never another section's header.
+                DB.Range("AN1").ClearContents
+                EnsureName nm, "'_BTS_DATA'!$AN$1"
+            End If
+        End If
+    Next section
 End Sub
 
 Private Sub BTS_InitList(ByVal sh As Worksheet, ByVal isPart As Boolean)
@@ -442,7 +475,7 @@ Private Sub BTS_MarkChoices()
     code = CStr(sh.Range("C4").Value)
     data.Range("AH2:AH1000").ClearContents
     p = 2
-    For r = 17 To 26
+    For r = BTS_RefHeader(3) + 1 To BTS_RefHeader(4) - 1
         If code <> "" And StrComp(Trim$(CStr(ref.Cells(r, 2).Value)), code, vbTextCompare) = 0 Then
             If Trim$(CStr(ref.Cells(r, 3).Value)) <> "" Then
                 data.Cells(p, 34).Value = ref.Cells(r, 3).Value
@@ -621,7 +654,7 @@ Private Function ValidMark(ByVal markName As String, ByVal matCode As String) As
     Dim sh As Worksheet, rowN As Long
     Set sh = S(9)
     If Trim$(markName) = "" Or Trim$(matCode) = "" Then Exit Function
-    For rowN = 17 To 26
+    For rowN = BTS_RefHeader(3) + 1 To BTS_RefHeader(4) - 1
         If StrComp(Trim$(CStr(sh.Cells(rowN, 3).Value)), Trim$(markName), vbTextCompare) = 0 And StrComp(Trim$(CStr(sh.Cells(rowN, 2).Value)), Trim$(matCode), vbTextCompare) = 0 Then
             ValidMark = True
             Exit Function
