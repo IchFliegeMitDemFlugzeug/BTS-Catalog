@@ -2,8 +2,8 @@
 Option Explicit
 
 Private Const MAX_DEPTH As Long = 6
-Private Const FORM_FIRST As Long = 9
-Private Const FORM_LAST As Long = 48
+Private Const FORM_FIRST As Long = 11
+Private Const FORM_LAST As Long = 50
 
 Private Function S(ByVal id As Long) As Worksheet
     Set S = ThisWorkbook.Worksheets(BTS_T(id))
@@ -243,38 +243,134 @@ Private Sub BTS_ReferenceInit()
 End Sub
 
 Private Sub BTS_FormInit()
-    Dim sh As Worksheet
+    ' Create the new form once. Existing catalogue sheets are not changed.
+    Dim sh As Worksheet, key As Variant, fresh As Boolean
     Set sh = S(1)
-    If CStr(sh.Range("A1").Value) = "" Then LayoutHeader sh, Array(BTS_T(14), BTS_T(15), BTS_T(16), BTS_T(17), BTS_T(18), BTS_T(19), BTS_T(10))
-    sh.Columns("A:F").ColumnWidth = 17
-    sh.Columns("G").ColumnWidth = 43
-    sh.Columns("H").ColumnWidth = 22
-    sh.Columns("I").ColumnWidth = 27
-    sh.Range("A4").Value = BTS_T(11)
-    sh.Range("A5").Value = BTS_T(12)
-    sh.Range("A7").Value = BTS_T(20)
-    sh.Range("A8:D8").Value = Array(BTS_T(10), BTS_T(11), BTS_T(13), BTS_T(21))
-    sh.Range("A8:D8").Font.Bold = True
-    sh.Range("A8:D8").Interior.Color = RGB(227, 232, 236)
-    sh.Columns("A").ColumnWidth = 40
-    sh.Columns("B").ColumnWidth = 42
-    sh.Columns("C").ColumnWidth = 15
-    sh.Columns("D").ColumnWidth = 17
-    sh.Columns("E:F").ColumnWidth = 18
-    PutList sh.Range("A2"), "BTSGroups"
-    PutList sh.Range("B2:C2"), "BTSMats"
-    PutList sh.Range("D2"), "BTSDiam"
-    PutList sh.Range("E2"), "BTSAngles"
-    PutList sh.Range("B5"), "BTSMarks"
+    fresh = (CStr(sh.Range("A1").Value) <> BTS_T(72))
+    If fresh Then
+        sh.Range("A1:I60").UnMerge
+        sh.Range("A1:I60").Clear
+        sh.Range("B6:G6").Merge
+        sh.Range("B7:D7").Merge
+        sh.Range("A1").Value = BTS_T(72)
+        sh.Range("B1").Value = BTS_T(73)
+    End If
+    sh.Range("A3:G3").Value = Array(BTS_T(14), BTS_T(12), BTS_T(16), BTS_T(17), BTS_T(18), BTS_T(19), BTS_T(10))
+    sh.Range("A6").Value = BTS_T(11)
+    sh.Range("A7").Value = BTS_T(69)
+    sh.Range("A9").Value = BTS_T(20)
+    sh.Range("A10:D10").Value = Array(BTS_T(10), BTS_T(11), BTS_T(13), BTS_T(21))
+    sh.Columns("A").ColumnWidth = 30
+    sh.Columns("B").ColumnWidth = 32
+    sh.Columns("C:D").ColumnWidth = 17
+    sh.Columns("E:F").ColumnWidth = 12
+    sh.Columns("G").ColumnWidth = 36
+    sh.Columns("H:I").ColumnWidth = 12
+    With sh.Range("A1:G50")
+        .Font.Name = "Arial"
+        .Font.Size = 10
+        .VerticalAlignment = xlCenter
+        .WrapText = True
+        .RowHeight = 21
+    End With
+    With sh.Range("A3:G3,A10:D10")
+        .Font.Bold = True
+        .Interior.Color = RGB(227, 232, 236)
+        .RowHeight = 32
+    End With
+    With sh.Range("A1:B1,A3:G4,A10:D50").Borders
+        .LineStyle = xlContinuous
+        .Color = RGB(175, 183, 190)
+        .Weight = xlThin
+    End With
+    sh.Range("D4:E4").NumberFormat = "00"
+    sh.Range("F4").NumberFormat = "@"
+    sh.Range("G4").NumberFormat = "@"
+    DB.Range("AA1:AA2").Value = Application.Transpose(Array(BTS_T(73), BTS_T(74)))
+    EnsureName "BTSItemKinds", "'_BTS_DATA'!$AA$1:$AA$2"
+    PutList sh.Range("B1"), "BTSItemKinds"
+    PutList sh.Range("A4"), "BTSGroups"
+    PutList sh.Range("B4"), "BTSMats"
+    PutList sh.Range("D4"), "BTSDiam"
+    PutList sh.Range("E4"), "BTSAngles"
     EnsureName "BTSRoles", "'_BTS_DATA'!$Z$1:$Z$3"
     DB.Range("Z1:Z3").Value = Application.Transpose(Array(BTS_T(22), BTS_T(23), BTS_T(24)))
-    PutList sh.Range("D9:D48"), "BTSRoles"
-    MakeButton sh, "addItem", BTS_T(26), "BTS_AddItem", "I2", 145
-    MakeButton sh, "saveItem", BTS_T(27), "BTS_SaveItem", "I4", 145
-    MakeButton sh, "loadItem", BTS_T(67), "BTS_LoadItem", "I6", 145
-    MakeButton sh, "propose", BTS_T(68), "BTS_ProposeNumber", "I8", 145
-    sh.Range("G2").Formula = "=IF(OR(A2="""",B2="""",D2="""",E2="""",F2=""""),"""",""BTS.""&A2&"".""&B2&IF(MOD(VALUE(F2),10)=0,C2,"""")&"".""&TEXT(VALUE(D2),""00"")&TEXT(VALUE(E2),""00"")&"".""&TEXT(VALUE(F2),""000""))"
+    PutList sh.Range("D11:D50"), "BTSRoles"
+    For Each key In Array("addItem", "saveItem", "loadItem", "propose")
+        On Error Resume Next
+        sh.Shapes(CStr(key)).Delete
+        On Error GoTo 0
+    Next key
+    MakeButton sh, "addItem", BTS_T(26), "BTS_AddItem", "G8", 145
     BTS_ComponentChoices
+    BTS_FormMode fresh
+    BTS_RefreshPreview
+End Sub
+
+Private Function BTS_FormIsAssembly() As Boolean
+    BTS_FormIsAssembly = (CStr(S(1).Range("B1").Value) = BTS_T(74))
+End Function
+
+Private Sub BTS_MarkChoices()
+    ' Offer only grades from the chosen material family.
+    Dim sh As Worksheet, ref As Worksheet, data As Worksheet, code As String, r As Long, p As Long
+    Set sh = S(1)
+    Set ref = S(9)
+    Set data = DB
+    code = CStr(sh.Range("B4").Value)
+    data.Range("AB2:AB1000").ClearContents
+    p = 2
+    For r = 17 To 26
+        If code <> "" And StrComp(Trim$(CStr(ref.Cells(r, 1).Value)), code, vbTextCompare) = 0 Then
+            If Trim$(CStr(ref.Cells(r, 2).Value)) <> "" Then
+                data.Cells(p, 28).Value = ref.Cells(r, 2).Value
+                p = p + 1
+            End If
+        End If
+    Next r
+    EnsureName "BTSSelectedMarks", "'_BTS_DATA'!$AB$2:$AB$" & CStr(Application.Max(2, p - 1))
+    PutList sh.Range("B7"), "BTSSelectedMarks"
+    If Not ValidMark(CStr(sh.Range("B7").Value), code) Then sh.Range("B7:D7").ClearContents
+End Sub
+
+Private Sub BTS_FormMode(ByVal resetEntry As Boolean)
+    ' Switch the visible fields and prevent stale assembly/part values.
+    Dim sh As Worksheet, isUnit As Boolean
+    Set sh = S(1)
+    isUnit = BTS_FormIsAssembly()
+    If resetEntry Then
+        sh.Range("C4,F4,G4,B6:G6,B7:D7,A11:D50").ClearContents
+        If isUnit Then
+            sh.Range("F4").Value = "000"
+        Else
+            sh.Range("F4").Value = "001"
+        End If
+    End If
+    sh.Columns("C").Hidden = Not isUnit
+    sh.Rows("7").Hidden = isUnit
+    sh.Rows("9:50").Hidden = Not isUnit
+    If isUnit Then
+        sh.Range("B3").Value = BTS_T(75)
+        sh.Range("C3").Value = BTS_T(76)
+        PutList sh.Range("C4"), "BTSMats"
+        sh.Range("B7:D7").ClearContents
+        sh.Range("B7").Validation.Delete
+    Else
+        sh.Range("B3").Value = BTS_T(12)
+        sh.Range("C4").ClearContents
+        sh.Range("C4").Validation.Delete
+        BTS_MarkChoices
+    End If
+End Sub
+
+Private Sub BTS_RefreshPreview()
+    Dim sh As Worksheet, code As String
+    Set sh = S(1)
+    code = CodeFrom(sh)
+    sh.Range("G4").Value = code
+    If BTS_FormIsAssembly() And CStr(sh.Range("A4").Value) = "SH" Then
+        sh.Range("B6").Value = AutomaticName(code)
+    End If
 End Sub
 
 Private Sub BTS_OrderInit()
@@ -284,7 +380,9 @@ Private Sub BTS_OrderInit()
     sh.Columns("A:F").ColumnWidth = 16
     sh.Columns("G").ColumnWidth = 40
     sh.Columns("H").ColumnWidth = 17
-    sh.Range("G2").Formula = S(1).Range("G2").Formula
+    sh.Range("D2:E2").NumberFormat = "00"
+    sh.Range("F2").NumberFormat = "@"
+    sh.Range("G2").Formula = "=IFERROR(IF(OR(A2="""",B2="""",D2="""",E2="""",F2="""",AND(MOD(VALUE(F2),10)=0,C2="""")),"""",""BTS.""&A2&"".""&B2&IF(MOD(VALUE(F2),10)=0,C2,"""")&"".""&TEXT(VALUE(D2),""00"")&TEXT(VALUE(E2),""00"")&"".""&TEXT(VALUE(F2),""000"")),"""")"
     If IsEmpty(sh.Range("H2").Value) Then sh.Range("H2").Value = 1
     sh.Range("A7:I7").Value = Array("I", "II", "III", "IV", "V", "VI", BTS_T(11), BTS_T(12), BTS_T(13))
     sh.Range("L7").Value = BTS_T(25)
@@ -304,17 +402,24 @@ Private Sub BTS_OrderInit()
 End Sub
 
 Private Function CodeFrom(ByVal sh As Worksheet) As String
-    Dim a As String, b As String, c As String, d As String, e As String, f As String
-    a = Trim$(CStr(sh.Range("A2").Value))
-    b = Trim$(CStr(sh.Range("B2").Value))
-    c = Trim$(CStr(sh.Range("C2").Value))
-    d = Trim$(CStr(sh.Range("D2").Value))
-    e = Trim$(CStr(sh.Range("E2").Value))
-    f = Trim$(CStr(sh.Range("F2").Value))
-    If a = "" Or b = "" Or d = "" Or e = "" Or f = "" Then Exit Function
-    If Not IsNumeric(d) Or Not IsNumeric(e) Or Not IsNumeric(f) Then Exit Function
-    If CLng(f) < 0 Or CLng(f) > 999 Or CLng(d) < 0 Or CLng(d) > 99 Then Exit Function
-    If CLng(f) Mod 10 = 0 Then
+    ' Creation has an explicit mode; the numeric suffix must agree with it.
+    Dim a As String, b As String, c As String, d As String, e As String, f As String, rr As Long, isUnit As Boolean
+    rr = 2
+    If sh.Name = BTS_T(1) Then rr = 4
+    a = Trim$(CStr(sh.Cells(rr, 1).Value2))
+    b = Trim$(CStr(sh.Cells(rr, 2).Value2))
+    c = Trim$(CStr(sh.Cells(rr, 3).Value2))
+    d = Trim$(CStr(sh.Cells(rr, 4).Value2))
+    e = Trim$(CStr(sh.Cells(rr, 5).Value2))
+    f = Trim$(CStr(sh.Cells(rr, 6).Value2))
+    If a = "" Or Len(b) <> 2 Or d = "" Or e = "" Or f = "" Then Exit Function
+    If Len(f) > 3 Or Len(d) > 2 Or Len(e) > 2 Then Exit Function
+    If f Like "*[!0-9]*" Or d Like "*[!0-9]*" Or e Like "*[!0-9]*" Then Exit Function
+    isUnit = (CLng(f) Mod 10 = 0)
+    If rr = 4 Then
+        If isUnit <> BTS_FormIsAssembly() Then Exit Function
+    End If
+    If isUnit Then
         If Len(c) <> 2 Then Exit Function
         b = b & c
     End If
@@ -347,9 +452,10 @@ End Function
 Private Function ValidMark(ByVal markName As String, ByVal matCode As String) As Boolean
     Dim sh As Worksheet, rowN As Long
     Set sh = S(9)
+    If Trim$(markName) = "" Or Trim$(matCode) = "" Then Exit Function
     For rowN = 17 To 26
-        If StrComp(CStr(sh.Cells(rowN, 2).Value), markName, vbTextCompare) = 0 Then
-            ValidMark = StrComp(CStr(sh.Cells(rowN, 1).Value), matCode, vbTextCompare) = 0
+        If StrComp(Trim$(CStr(sh.Cells(rowN, 2).Value)), Trim$(markName), vbTextCompare) = 0 And StrComp(Trim$(CStr(sh.Cells(rowN, 1).Value)), Trim$(matCode), vbTextCompare) = 0 Then
+            ValidMark = True
             Exit Function
         End If
     Next rowN
@@ -371,7 +477,7 @@ End Function
 Private Function ValidateForm(ByVal code As String, ByVal overwrite As Boolean) As Boolean
     Dim sh As Worksheet, r As Long, cmp As String, q As Variant, nBase As Long, nHead As Long, ar As Variant, baseMat As String, headMat As String, kindAssembly As Boolean, seen As Object
     Set sh = S(1)
-    If code = "" Then MsgBox BTS_T(40), vbExclamation: Exit Function
+    If code = "" Then MsgBox BTS_T(77), vbExclamation: Exit Function
     If overwrite Then
         If Not ExistsCode(code) Then MsgBox BTS_T(41), vbExclamation: Exit Function
     Else
@@ -394,10 +500,10 @@ Private Function ValidateForm(ByVal code As String, ByVal overwrite As Boolean) 
                 If cmp = code Or HasPath(cmp, code, 0) Then MsgBox BTS_T(44), vbExclamation: Exit Function
                 If CStr(sh.Cells(r, 4).Value) = BTS_T(22) Then
                     nBase = nBase + 1
-                    If Mid$(Split(cmp, ".")(2), 1, 2) <> baseMat Then MsgBox BTS_T(45), vbExclamation: Exit Function
+                    If ComponentMaterial(cmp) <> baseMat Then MsgBox BTS_T(45), vbExclamation: Exit Function
                 ElseIf CStr(sh.Cells(r, 4).Value) = BTS_T(23) Then
                     nHead = nHead + 1
-                    If Mid$(Split(cmp, ".")(2), 1, 2) <> headMat Then MsgBox BTS_T(45), vbExclamation: Exit Function
+                    If ComponentMaterial(cmp) <> headMat Then MsgBox BTS_T(45), vbExclamation: Exit Function
                 End If
             End If
         Next r
@@ -405,18 +511,22 @@ Private Function ValidateForm(ByVal code As String, ByVal overwrite As Boolean) 
             If nBase <> 1 Or nHead <> 1 Then MsgBox BTS_T(46), vbExclamation: Exit Function
         End If
     Else
-        If Trim$(CStr(sh.Range("B4").Value)) = "" Then MsgBox BTS_T(47), vbExclamation: Exit Function
-        If Not ValidMark(CStr(sh.Range("B5").Value), CStr(ar(2))) Then MsgBox BTS_T(48), vbExclamation: Exit Function
+        If Trim$(CStr(sh.Range("B6").Value)) = "" Then MsgBox BTS_T(47), vbExclamation: Exit Function
+        If Not ValidMark(CStr(sh.Range("B7").Value), CStr(ar(2))) Then MsgBox BTS_T(48), vbExclamation: Exit Function
     End If
     ValidateForm = True
 End Function
 
+Private Function ComponentMaterial(ByVal code As String) As String
+    Dim fields As Variant
+    fields = Split(code, ".")
+    If UBound(fields) <> 4 Then Exit Function
+    If fields(0) <> "BTS" Then Exit Function
+    ComponentMaterial = Left$(CStr(fields(2)), 2)
+End Function
+
 Public Sub BTS_AddItem()
     SaveCurrent False
-End Sub
-
-Public Sub BTS_SaveItem()
-    SaveCurrent True
 End Sub
 
 Private Sub RemoveCompositions(ByVal parent As String)
@@ -436,8 +546,9 @@ Private Sub SaveCurrent(ByVal overwrite As Boolean)
     ar = Split(code, ".")
     sameKind = IsAssemblyCode(code)
     If sameKind Then
-        n = Trim$(CStr(sh.Range("B4").Value))
-        If n = "" Then n = AutomaticName(code)
+        n = Trim$(CStr(sh.Range("B6").Value))
+        If ar(1) = "SH" Then n = AutomaticName(code)
+        If n = "" Then MsgBox BTS_T(47), vbExclamation: Exit Sub
         If overwrite Then
             targetRow = AssemblyRow(code)
             If targetRow = 0 Then MsgBox BTS_T(49), vbExclamation: Exit Sub
@@ -466,56 +577,14 @@ Private Sub SaveCurrent(ByVal overwrite As Boolean)
             targetRow = NextFree(S(2), 1)
         End If
         S(2).Cells(targetRow, 1).Value = code
-        S(2).Cells(targetRow, 2).Value = CStr(sh.Range("B4").Value)
-        S(2).Cells(targetRow, 3).Value = CStr(sh.Range("B5").Value)
+        S(2).Cells(targetRow, 2).Value = CStr(sh.Range("B6").Value)
+        S(2).Cells(targetRow, 3).Value = CStr(sh.Range("B7").Value)
     End If
     BTS_RebuildAll
     MsgBox BTS_T(37), vbInformation
 End Sub
 
-Public Sub BTS_LoadItem()
-    Dim code As String, sh As Worksheet, data As Worksheet, p As Long, r As Long, atRow As Long, ar As Variant
-    Set sh = S(1)
-    Set data = DB
-    code = CodeFrom(sh)
-    If Not ExistsCode(code) Then MsgBox BTS_T(41), vbExclamation: Exit Sub
-    ar = Split(code, ".")
-    sh.Range("B4:B5").ClearContents
-    sh.Range("A9:D48").ClearContents
-    If IsAssembly(code) Then
-        p = AssemblyRow(code)
-        sh.Range("B4").Value = data.Cells(p, 2).Value
-        atRow = FORM_FIRST
-        For r = 2 To EndRow(data, 6)
-            If CStr(data.Cells(r, 6).Value) = code Then
-                If atRow > FORM_LAST Then Exit For
-                sh.Cells(atRow, 1).Value = data.Cells(r, 7).Value
-                sh.Cells(atRow, 2).Value = ItemName(CStr(data.Cells(r, 7).Value))
-                sh.Cells(atRow, 3).Value = data.Cells(r, 8).Value
-                sh.Cells(atRow, 4).Value = data.Cells(r, 9).Value
-                atRow = atRow + 1
-            End If
-        Next r
-    Else
-        p = PartRow(code)
-        sh.Range("B4").Value = S(2).Cells(p, 2).Value
-        sh.Range("B5").Value = S(2).Cells(p, 3).Value
-    End If
-End Sub
-
-Public Sub BTS_ProposeNumber()
-    Dim sh As Worksheet, k As Long, code As String, unitType As Boolean
-    Set sh = S(1)
-    unitType = (MsgBox(BTS_T(50), vbYesNo + vbQuestion) = vbYes)
-    For k = 0 To 999
-        If (unitType And k Mod 10 = 0) Or (Not unitType And k Mod 10 <> 0) Then
-            sh.Range("F2").Value = Format$(k, "000")
-            code = CodeFrom(sh)
-            If code <> "" And Not ExistsCode(code) Then Exit Sub
-        End If
-    Next k
-    MsgBox BTS_T(51), vbExclamation
-End Sub
+' The former load, save and propose actions are removed.
 
 Private Sub BTS_ComponentChoices()
     Dim data As Worksheet, sh As Worksheet, i As Long, p As Long
@@ -535,7 +604,7 @@ Private Sub BTS_ComponentChoices()
     Next i
     If p = 2 Then data.Range("U2").Value = ""
     EnsureName "BTSComponents", "'_BTS_DATA'!$U$2:$U$" & CStr(Application.Max(2, p - 1))
-    PutList S(1).Range("A9:A48"), "BTSComponents"
+    PutList S(1).Range("A11:A50"), "BTSComponents"
 End Sub
 
 Private Sub SortChildren(ByRef pairs As Variant, ByVal qty As Long)
@@ -997,38 +1066,51 @@ Private Sub AddOption(ByVal code As String, ByVal formSh As Worksheet, ByVal tar
 End Sub
 
 Public Sub BTS_Changed(ByVal Sh As Object, ByVal Target As Range)
+    Dim r As Long, raw As String
+    On Error GoTo Failed
+    Application.EnableEvents = False
     If Sh.Name = BTS_T(8) Then
-        If Not Intersect(Target, Sh.Range("A2:F2")) Is Nothing Then
-            On Error GoTo Clean
-            Application.EnableEvents = False
-            BTS_UpdateOrderLists
-        End If
+        If Not Intersect(Target, Sh.Range("A2:F2")) Is Nothing Then BTS_UpdateOrderLists
     ElseIf Sh.Name = BTS_T(7) Then
-        If Not Intersect(Target, Sh.Range("A2:B2000")) Is Nothing Then
-            On Error GoTo Clean
-            Application.EnableEvents = False
-            BTS_ComponentChoices
+        If Not Intersect(Target, Sh.Range("A2:B2000")) Is Nothing Then BTS_ComponentChoices
+    ElseIf Sh.Name = BTS_T(9) Then
+        If Not Intersect(Target, Sh.Range("A17:B26")) Is Nothing Then
+            If Not BTS_FormIsAssembly() Then BTS_MarkChoices
         End If
     ElseIf Sh.Name = BTS_T(1) Then
-        If Not Intersect(Target, Sh.Range("A2:F2")) Is Nothing Then
-            On Error GoTo Clean
-            Application.EnableEvents = False
-            Dim chosen As String, autoText As String
-            chosen = CodeFrom(Sh)
-            If chosen <> "" Then
-                autoText = AutomaticName(chosen)
-                If autoText <> "" Then Sh.Range("B4").Value = autoText
+        If Not Intersect(Target, Sh.Range("B1")) Is Nothing Then
+            BTS_FormMode True
+        ElseIf Not Intersect(Target, Sh.Range("A4:F4")) Is Nothing Then
+            If Not Intersect(Target, Sh.Range("A4")) Is Nothing Then Sh.Range("B6:G6").ClearContents
+            If Not Intersect(Target, Sh.Range("B4")) Is Nothing Then
+                If Not BTS_FormIsAssembly() Then BTS_MarkChoices
+            End If
+            If Not Intersect(Target, Sh.Range("F4")) Is Nothing Then
+                raw = Trim$(CStr(Sh.Range("F4").Value2))
+                If Len(raw) > 0 And Len(raw) <= 3 And Not raw Like "*[!0-9]*" Then
+                    Sh.Range("F4").Value2 = Format$(CLng(raw), "000")
+                End If
+                If raw <> "" And CodeFrom(Sh) = "" Then
+                    ' Validate suffix separately from the other, possibly incomplete, fields.
+                    If Len(raw) > 3 Or raw Like "*[!0-9]*" Then
+                        MsgBox BTS_T(77), vbExclamation
+                    ElseIf (CLng(raw) Mod 10 = 0) <> BTS_FormIsAssembly() Then
+                        MsgBox BTS_T(77), vbExclamation
+                    End If
+                End If
             End If
         End If
-        If Not Intersect(Target, Sh.Range("A9:A48")) Is Nothing Then
-            On Error GoTo Clean
-            Application.EnableEvents = False
-            Dim r As Long
-            For r = 9 To 48
-                If CStr(Sh.Cells(r, 1).Value) <> "" Then Sh.Cells(r, 2).Value = ItemName(CStr(Sh.Cells(r, 1).Value))
+        If Not Intersect(Target, Sh.Range("B1,A4:F4")) Is Nothing Then BTS_RefreshPreview
+        If Not Intersect(Target, Sh.Range("A11:A50")) Is Nothing Then
+            For r = FORM_FIRST To FORM_LAST
+                Sh.Cells(r, 2).Value = ItemName(CStr(Sh.Cells(r, 1).Value))
             Next r
         End If
     End If
 Clean:
     Application.EnableEvents = True
+    Exit Sub
+Failed:
+    MsgBox "BTS_Changed: " & Err.Description, vbExclamation
+    Resume Clean
 End Sub
