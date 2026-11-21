@@ -154,6 +154,42 @@ Public Function BTS_T(ByVal id As Long) As String
             BTS_T = ChrW(1052) & ChrW(1072) & ChrW(1090) & ChrW(1077) & ChrW(1088) & ChrW(1080) & ChrW(1072) & ChrW(1083) & " " & ChrW(1075) & ChrW(1086) & ChrW(1083) & ChrW(1086) & ChrW(1074) & ChrW(1082) & ChrW(1080)
         Case 77
             BTS_T = ChrW(1055) & ChrW(1088) & ChrW(1086) & ChrW(1074) & ChrW(1077) & ChrW(1088) & ChrW(1100) & ChrW(1090) & ChrW(1077) & " " & ChrW(1087) & ChrW(1086) & ChrW(1083) & ChrW(1103) & " " & ChrW(1086) & ChrW(1073) & ChrW(1086) & ChrW(1079) & ChrW(1085) & ChrW(1072) & ChrW(1095) & ChrW(1077) & ChrW(1085) & ChrW(1080) & ChrW(1103) & "." & " " & ChrW(1053) & ChrW(1086) & ChrW(1084) & ChrW(1077) & ChrW(1088) & " " & ChrW(1089) & ChrW(1073) & ChrW(1086) & ChrW(1088) & ChrW(1082) & ChrW(1080) & " " & ChrW(1076) & ChrW(1086) & ChrW(1083) & ChrW(1078) & ChrW(1077) & ChrW(1085) & " " & ChrW(1086) & ChrW(1082) & ChrW(1072) & ChrW(1085) & ChrW(1095) & ChrW(1080) & ChrW(1074) & ChrW(1072) & ChrW(1090) & ChrW(1100) & ChrW(1089) & ChrW(1103) & " " & ChrW(1085) & ChrW(1072) & " " & "0" & "," & " " & ChrW(1085) & ChrW(1086) & ChrW(1084) & ChrW(1077) & ChrW(1088) & " " & ChrW(1076) & ChrW(1077) & ChrW(1090) & ChrW(1072) & ChrW(1083) & ChrW(1080) & " " & ChrW(1085) & ChrW(1072) & " " & "1" & "-" & "9" & "."
+        Case 78
+            BTS_T = ChrW(1050) & ChrW(1086) & ChrW(1084) & ChrW(1087) & ChrW(1086) & ChrW(1085) & ChrW(1077) & ChrW(1085) & ChrW(1090)
+        Case 79
+            BTS_T = ChrW(1044) & ChrW(1077) & ChrW(1090) & ChrW(1072) & ChrW(1083) & ChrW(1080) & " " & ChrW(1080) & " " & ChrW(1089) & ChrW(1073) & ChrW(1086) & ChrW(1088) & ChrW(1082) & ChrW(1080)
+        Case 80
+            BTS_T = ChrW(8470)
+        Case 81
+            BTS_T = ChrW(1059) & ChrW(1076) & ChrW(1072) & ChrW(1083) & ChrW(1080) & ChrW(1090) & ChrW(1100)
+        Case 82
+            BTS_T = ChrW(1044) & ChrW(1086) & ChrW(1073) & ChrW(1072) & ChrW(1074) & ChrW(1080) & ChrW(1090) & ChrW(1100) & " " & ChrW(1074) & " " & ChrW(1089) & ChrW(1073) & ChrW(1086) & ChrW(1088) & ChrW(1082) & ChrW(1091)
+        Case 83
+            BTS_T = ChrW(1042) & " " & ChrW(1089) & ChrW(1086) & ChrW(1089) & ChrW(1090) & ChrW(1072) & ChrW(1074) & ChrW(1077) & " " & ChrW(1089) & ChrW(1073) & ChrW(1086) & ChrW(1088) & ChrW(1086) & ChrW(1095) & ChrW(1085) & ChrW(1086) & ChrW(1081) & " " & ChrW(1077) & ChrW(1076) & ChrW(1080) & ChrW(1085) & ChrW(1080) & ChrW(1094) & ChrW(1099) & " " & ChrW(1076) & ChrW(1086) & ChrW(1083) & ChrW(1078) & ChrW(1085) & ChrW(1086) & " " & ChrW(1073) & ChrW(1099) & ChrW(1090) & ChrW(1100) & " " & ChrW(1085) & ChrW(1077) & " " & ChrW(1084) & ChrW(1077) & ChrW(1085) & ChrW(1077) & ChrW(1077) & " " & ChrW(1076) & ChrW(1074) & ChrW(1091) & ChrW(1093) & " " & ChrW(1088) & ChrW(1072) & ChrW(1079) & ChrW(1085) & ChrW(1099) & ChrW(1093) & " " & ChrW(1082) & ChrW(1086) & ChrW(1084) & ChrW(1087) & ChrW(1086) & ChrW(1085) & ChrW(1077) & ChrW(1085) & ChrW(1090) & ChrW(1086) & ChrW(1074) & "."
+        Case 86
+            BTS_T = ChrW(1042) & ChrW(1099) & ChrW(1073) & ChrW(1077) & ChrW(1088) & ChrW(1080) & ChrW(1090) & ChrW(1077) & " " & ChrW(1089) & ChrW(1091) & ChrW(1097) & ChrW(1077) & ChrW(1089) & ChrW(1090) & ChrW(1074) & ChrW(1091) & ChrW(1102) & ChrW(1097) & ChrW(1077) & ChrW(1077) & " " & ChrW(1080) & ChrW(1079) & ChrW(1076) & ChrW(1077) & ChrW(1083) & ChrW(1080) & ChrW(1077) & " " & ChrW(1080) & " " & ChrW(1091) & ChrW(1082) & ChrW(1072) & ChrW(1078) & ChrW(1080) & ChrW(1090) & ChrW(1077) & " " & ChrW(1094) & ChrW(1077) & ChrW(1083) & ChrW(1086) & ChrW(1077) & " " & ChrW(1087) & ChrW(1086) & ChrW(1083) & ChrW(1086) & ChrW(1078) & ChrW(1080) & ChrW(1090) & ChrW(1077) & ChrW(1083) & ChrW(1100) & ChrW(1085) & ChrW(1086) & ChrW(1077) & " " & ChrW(1082) & ChrW(1086) & ChrW(1083) & ChrW(1080) & ChrW(1095) & ChrW(1077) & ChrW(1089) & ChrW(1090) & ChrW(1074) & ChrW(1086) & "."
+        Case 87
+            BTS_T = ChrW(1058) & ChrW(1072) & ChrW(1073) & ChrW(1083) & ChrW(1080) & ChrW(1094) & ChrW(1072) & " " & ChrW(1089) & ChrW(1086) & ChrW(1089) & ChrW(1090) & ChrW(1072) & ChrW(1074) & ChrW(1072) & " " & ChrW(1079) & ChrW(1072) & ChrW(1087) & ChrW(1086) & ChrW(1083) & ChrW(1085) & ChrW(1077) & ChrW(1085) & ChrW(1072) & "."
+        Case 89
+            BTS_T = ChrW(1043) & ChrW(1054) & ChrW(1057) & ChrW(1058) & " " & ChrW(1056)
+        Case 90
+            BTS_T = ChrW(1043) & ChrW(1054) & ChrW(1057) & ChrW(1058)
+        Case 91
+            BTS_T = ChrW(1057) & ChrW(1058) & ChrW(1054)
+        Case 92
+            BTS_T = ChrW(1054) & ChrW(1057) & ChrW(1058)
+        Case 93
+            BTS_T = ChrW(1042) & ChrW(1080) & ChrW(1085) & ChrW(1090)
+        Case 94
+            BTS_T = ChrW(1043) & ChrW(1072) & ChrW(1081) & ChrW(1082) & ChrW(1072)
+        Case 95
+            BTS_T = ChrW(1064) & ChrW(1072) & ChrW(1081) & ChrW(1073) & ChrW(1072)
+        Case 96
+            BTS_T = ChrW(1041) & ChrW(1086) & ChrW(1083) & ChrW(1090)
+        Case 97
+            BTS_T = ChrW(1064) & ChrW(1087) & ChrW(1080) & ChrW(1083) & ChrW(1100) & ChrW(1082) & ChrW(1072)
+        Case 98
+            BTS_T = ChrW(1050) & ChrW(1088) & ChrW(1077) & ChrW(1087) & ChrW(1077) & ChrW(1078) & ChrW(1085) & ChrW(1099) & ChrW(1077) & " " & ChrW(1080) & ChrW(1079) & ChrW(1076) & ChrW(1077) & ChrW(1083) & ChrW(1080) & ChrW(1103)
         Case Else
             BTS_T = ""
     End Select
