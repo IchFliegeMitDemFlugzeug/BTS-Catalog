@@ -673,6 +673,17 @@ Private Sub ResetTree(ByVal sh As Worksheet, ByVal firstRow As Long)
     On Error GoTo 0
 End Sub
 
+Private Function FamilySortKey(ByVal code As String) As String
+    ' Diameter + angle precede material when comparing finished components.
+    Dim ar As Variant
+    ar = Split(code, ".")
+    If UBound(ar) = 4 Then
+        FamilySortKey = CStr(ar(3)) & "." & CStr(ar(2)) & "." & CStr(ar(4))
+    Else
+        FamilySortKey = code
+    End If
+End Function
+
 Private Sub DrawFamily(ByVal id As Long)
     Dim sh As Worksheet, data As Worksheet, n As Long, i As Long, j As Long, total As Long, code As String, temp As String, arr() As String, rowN As Long
     Set sh = S(id)
@@ -693,7 +704,7 @@ Private Sub DrawFamily(ByVal id As Long)
     Next i
     For i = 1 To total - 1
         For j = i + 1 To total
-            If StrComp(arr(i), arr(j), vbTextCompare) > 0 Then temp = arr(i): arr(i) = arr(j): arr(j) = temp
+            If StrComp(FamilySortKey(arr(i)), FamilySortKey(arr(j)), vbTextCompare) > 0 Then temp = arr(i): arr(i) = arr(j): arr(j) = temp
         Next j
     Next i
     rowN = 2
@@ -891,9 +902,14 @@ Private Sub CountLeaves(ByVal root As String, ByVal code As String, ByVal path A
         Exit Sub
     End If
     Set data = DB
+    Dim foundChild As Boolean
     For i = 2 To EndRow(data, 6)
-        If CStr(data.Cells(i, 6).Value) = code Then CountLeaves root, CStr(data.Cells(i, 7).Value), path & "/" & CStr(data.Cells(i, 7).Value), n * CDbl(data.Cells(i, 8).Value), totals, depth + 1
+        If CStr(data.Cells(i, 6).Value) = code Then
+            foundChild = True
+            CountLeaves root, CStr(data.Cells(i, 7).Value), path & "/" & CStr(data.Cells(i, 7).Value), n * CDbl(data.Cells(i, 8).Value), totals, depth + 1
+        End If
     Next i
+    If Not foundChild Then Err.Raise vbObjectError + 202, , "No components defined: " & code
 End Sub
 
 Public Sub BTS_ExportOrder()
