@@ -287,6 +287,8 @@ Private Sub BTS_OrderInit()
     sh.Range("G2").Formula = S(1).Range("G2").Formula
     If IsEmpty(sh.Range("H2").Value) Then sh.Range("H2").Value = 1
     sh.Range("A7:I7").Value = Array("I", "II", "III", "IV", "V", "VI", BTS_T(11), BTS_T(12), BTS_T(13))
+    sh.Range("L7").Value = BTS_T(25)
+    sh.Columns("L").ColumnWidth = 18
     sh.Range("A7:I7").Font.Bold = True
     sh.Range("A7:I7").Interior.Color = RGB(227, 232, 236)
     sh.Columns("A:F").ColumnWidth = 29
@@ -434,8 +436,8 @@ Private Sub SaveCurrent(ByVal overwrite As Boolean)
     ar = Split(code, ".")
     sameKind = IsAssemblyCode(code)
     If sameKind Then
-        n = AutomaticName(code)
-        If n = "" Then n = Trim$(CStr(sh.Range("B4").Value))
+        n = Trim$(CStr(sh.Range("B4").Value))
+        If n = "" Then n = AutomaticName(code)
         If overwrite Then
             targetRow = AssemblyRow(code)
             If targetRow = 0 Then MsgBox BTS_T(49), vbExclamation: Exit Sub
@@ -809,12 +811,18 @@ Private Sub BTS_RebuildOrder()
     Set sh = S(8)
     Set data = DB
     ResetTree sh, 8
+    sh.Range("L8:L10000").ClearContents
     rowN = 8
     sh.Outline.SummaryRow = xlAbove
     For i = 2 To EndRow(data, 11)
         code = CStr(data.Cells(i, 11).Value)
         If code <> "" Then DrawNode sh, code, "", code, code, 1, CDbl(data.Cells(i, 12).Value), rowN, True
     Next i
+    If rowN > 8 Then
+        sh.Range("L8:L" & CStr(rowN - 1)).Value = BTS_T(25)
+        sh.Range("L8:L" & CStr(rowN - 1)).Font.Color = RGB(95, 39, 39)
+        sh.Range("L8:L" & CStr(rowN - 1)).HorizontalAlignment = xlCenter
+    End If
 End Sub
 
 Public Sub BTS_AddToOrder()
@@ -959,7 +967,7 @@ Public Sub BTS_Changed(ByVal Sh As Object, ByVal Target As Range)
             Application.EnableEvents = False
             Dim chosen As String, autoText As String
             chosen = CodeFrom(Sh)
-            If chosen <> "" And IsAssemblyCode(chosen) Then
+            If chosen <> "" Then
                 autoText = AutomaticName(chosen)
                 If autoText <> "" Then Sh.Range("B4").Value = autoText
             End If
