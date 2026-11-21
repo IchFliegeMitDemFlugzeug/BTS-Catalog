@@ -200,53 +200,46 @@ Failed:
 End Sub
 
 Private Sub BTS_ReferenceInit()
-    Dim sh As Worksheet, i As Long, items As Variant, codes As Variant, marks As Variant
+    ' Reference sheet uses a narrow vertical layout, never extra columns N and beyond.
+    Dim sh As Worksheet, i As Long
     Set sh = S(9)
     If CStr(sh.Range("A1").Value) = "" Then
-        sh.Range("A1:B1").Value = Array(BTS_T(40), BTS_T(41))
-        sh.Range("D1:E1").Value = Array(BTS_T(40), BTS_T(12))
-        sh.Range("G1:I1").Value = Array(BTS_T(40), BTS_T(69), BTS_T(12))
-        sh.Range("K1").Value = BTS_T(17)
-        sh.Range("M1").Value = BTS_T(18)
-        items = Array("SH", "KR", "DU", "DT")
-        codes = Array("AL", "BR", "LA", "ST")
-        marks = Array(BTS_T(61), BTS_T(62), BTS_T(63), BTS_T(64))
+        sh.Range("A1").Value = BTS_T(40)
+        sh.Range("B1").Value = BTS_T(14)
         For i = 0 To 3
-            sh.Cells(i + 2, 1).Value = items(i)
+            sh.Cells(i + 2, 1).Value = Choose(i + 1, "SH", "KR", "DU", "DT")
             sh.Cells(i + 2, 2).Value = BTS_T(i + 3)
-            sh.Cells(i + 2, 4).Value = codes(i)
-            sh.Cells(i + 2, 5).Value = codes(i)
-            sh.Cells(i + 2, 7).Value = codes(i)
-            sh.Cells(i + 2, 8).Value = marks(i)
-            sh.Cells(i + 2, 9).Value = codes(i)
         Next i
+        sh.Range("A8").Value = BTS_T(40)
+        sh.Range("B8").Value = BTS_T(12)
+        sh.Range("A16").Value = BTS_T(40)
+        sh.Range("B16").Value = BTS_T(69)
+        sh.Range("C16").Value = BTS_T(12)
+        For i = 0 To 3
+            sh.Cells(i + 9, 1).Value = Choose(i + 1, "AL", "BR", "LA", "ST")
+            sh.Cells(i + 17, 1).Value = Choose(i + 1, "AL", "BR", "LA", "ST")
+            sh.Cells(i + 17, 2).Value = BTS_T(i + 61)
+            sh.Cells(i + 17, 3).Value = Choose(i + 1, "AL", "BR", "LA", "ST")
+        Next i
+        sh.Range("A27").Value = BTS_T(40)
+        sh.Range("B27").Value = BTS_T(17)
+        sh.Range("A37").Value = BTS_T(40)
+        sh.Range("B37").Value = BTS_T(18)
         For i = 0 To 4
-            sh.Cells(i + 2, 11).Value = Choose(i + 1, "40", "45", "50", "55", "60")
-            sh.Cells(i + 2, 13).Value = Choose(i + 1, "00", "30", "45", "60", "90")
+            sh.Cells(i + 28, 1).Value = Choose(i + 1, "40", "45", "50", "55", "60")
+            sh.Cells(i + 38, 1).Value = Choose(i + 1, "00", "30", "45", "60", "90")
         Next i
-        sh.Range("A9").Value = BTS_T(10)
-        sh.Range("B9").Value = "BTS.XX.MM.DDAA.NNN"
-        sh.Range("A10").Value = "000"
-        sh.Range("B10").Value = BTS_T(65)
-        sh.Range("A11").Value = "001-999"
-        sh.Range("B11").Value = BTS_T(66)
-        sh.Range("A1:M1").Font.Bold = True
-        sh.Range("A1:M1").Interior.Color = RGB(227, 232, 236)
+        sh.Range("A47").Value = BTS_T(10)
+        sh.Range("B47").Value = "BTS.XX.MM.DDAA.NNN"
     End If
-    sh.Columns("A").ColumnWidth = 13
-    sh.Columns("B").ColumnWidth = 33
-    sh.Columns("D").ColumnWidth = 13
-    sh.Columns("E").ColumnWidth = 20
-    sh.Columns("G").ColumnWidth = 13
-    sh.Columns("H").ColumnWidth = 23
-    sh.Columns("I").ColumnWidth = 20
-    sh.Columns("K").ColumnWidth = 18
-    sh.Columns("M").ColumnWidth = 18
-    EnsureName "BTSGroups", "'" & sh.Name & "'!$A$2:$A$200"
-    EnsureName "BTSMats", "'" & sh.Name & "'!$D$2:$D$200"
-    EnsureName "BTSMarks", "'" & sh.Name & "'!$H$2:$H$200"
-    EnsureName "BTSDiam", "'" & sh.Name & "'!$K$2:$K$100"
-    EnsureName "BTSAngles", "'" & sh.Name & "'!$M$2:$M$100"
+    sh.Columns("A").ColumnWidth = 19
+    sh.Columns("B").ColumnWidth = 37
+    sh.Columns("C").ColumnWidth = 24
+    EnsureName "BTSGroups", "'" & sh.Name & "'!$A$2:$A$5"
+    EnsureName "BTSMats", "'" & sh.Name & "'!$A$9:$A$15"
+    EnsureName "BTSMarks", "'" & sh.Name & "'!$B$17:$B$26"
+    EnsureName "BTSDiam", "'" & sh.Name & "'!$A$28:$A$36"
+    EnsureName "BTSAngles", "'" & sh.Name & "'!$A$38:$A$46"
 End Sub
 
 Private Sub BTS_FormInit()
@@ -352,9 +345,9 @@ End Function
 Private Function ValidMark(ByVal markName As String, ByVal matCode As String) As Boolean
     Dim sh As Worksheet, rowN As Long
     Set sh = S(9)
-    For rowN = 1 To EndRow(sh, 8)
-        If StrComp(CStr(sh.Cells(rowN, 8).Value), markName, vbTextCompare) = 0 Then
-            ValidMark = StrComp(CStr(sh.Cells(rowN, 7).Value), matCode, vbTextCompare) = 0
+    For rowN = 17 To 26
+        If StrComp(CStr(sh.Cells(rowN, 2).Value), markName, vbTextCompare) = 0 Then
+            ValidMark = StrComp(CStr(sh.Cells(rowN, 1).Value), matCode, vbTextCompare) = 0
             Exit Function
         End If
     Next rowN
