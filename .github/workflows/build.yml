@@ -30,6 +30,9 @@ jobs:
       - name: Generate and validate BTS.xlsm
         run: python scripts/build.py
 
+      - name: Check VBA syntax and initialization where supported
+        run: python scripts/check_vba.py
+
       - name: Commit verified workbook
         shell: bash
         run: |
